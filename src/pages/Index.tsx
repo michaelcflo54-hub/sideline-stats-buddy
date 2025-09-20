@@ -107,7 +107,10 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card 
+            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => navigate('/analytics')}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Analytics</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -152,12 +155,20 @@ const Index = () => {
                     <BarChart3 className="mr-2 h-4 w-4" />
                     Record Plays
                   </Button>
+                  <Button variant="outline" className="w-full justify-start" asChild>
+                    <Link to="/analytics">
+                      <TrendingUp className="mr-2 h-4 w-4" />
+                      View Analytics
+                    </Link>
+                  </Button>
                 </>
               ) : (
                 <>
-                  <Button variant="outline" className="w-full justify-start">
-                    <BarChart3 className="mr-2 h-4 w-4" />
-                    View Team Stats
+                  <Button variant="outline" className="w-full justify-start" asChild>
+                    <Link to="/analytics">
+                      <BarChart3 className="mr-2 h-4 w-4" />
+                      View Team Analytics  
+                    </Link>
                   </Button>
                   <Button variant="outline" className="w-full justify-start" asChild>
                     <Link to="/players">
