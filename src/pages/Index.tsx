@@ -2,7 +2,8 @@ import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
-import { Plus, Users, Calendar, BarChart3 } from 'lucide-react';
+import { Plus, Users, Calendar, BarChart3, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Index = () => {
   const { profile } = useAuth();
@@ -84,13 +85,21 @@ const Index = () => {
             <CardContent className="space-y-4">
               {canManageData ? (
                 <>
+                  <Button variant="outline" className="w-full justify-start" asChild>
+                    <Link to="/team">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Manage Team
+                    </Link>
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start" asChild>
+                    <Link to="/players">
+                      <Users className="mr-2 h-4 w-4" />
+                      Manage Players
+                    </Link>
+                  </Button>
                   <Button variant="outline" className="w-full justify-start">
                     <Plus className="mr-2 h-4 w-4" />
                     Add New Game
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    <Users className="mr-2 h-4 w-4" />
-                    Manage Players
                   </Button>
                   <Button variant="outline" className="w-full justify-start">
                     <BarChart3 className="mr-2 h-4 w-4" />
@@ -103,9 +112,11 @@ const Index = () => {
                     <BarChart3 className="mr-2 h-4 w-4" />
                     View Team Stats
                   </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    <Users className="mr-2 h-4 w-4" />
-                    Player Performance
+                  <Button variant="outline" className="w-full justify-start" asChild>
+                    <Link to="/players">
+                      <Users className="mr-2 h-4 w-4" />
+                      View Players
+                    </Link>
                   </Button>
                 </>
               )}
@@ -114,12 +125,33 @@ const Index = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Latest updates and insights</CardDescription>
+              <CardTitle>Getting Started</CardTitle>
+              <CardDescription>Steps to set up your team analytics</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                No recent activity to display
+              <div className="space-y-3">
+                {profile?.role === 'head_coach' && (
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    <span className="text-sm">Create your team and invite coaches</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
+                  <span className="text-sm">Add players to your roster</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
+                  <span className="text-sm">Schedule and add games</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
+                  <span className="text-sm">Start recording play data</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
+                  <span className="text-sm">View analytics and insights</span>
+                </div>
               </div>
             </CardContent>
           </Card>
