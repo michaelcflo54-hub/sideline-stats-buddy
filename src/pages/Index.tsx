@@ -4,12 +4,36 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { Plus, Users, Calendar, BarChart3, Settings, Building2, TrendingUp, Archive } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   const { profile } = useAuth();
+  const navigate = useNavigate();
+  const [team, setTeam] = useState<any>(null);
   
   const canManageData = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
+
+  useEffect(() => {
+    if (profile?.team_id) {
+      fetchTeamData();
+    }
+  }, [profile]);
+
+  const fetchTeamData = async () => {
+    try {
+      const { data: teamData } = await supabase
+        .from('teams')
+        .select('*')
+        .eq('id', profile.team_id)
+        .single();
+      
+      setTeam(teamData);
+    } catch (error) {
+      console.error('Error fetching team data:', error);
+    }
+  };
 
   return (
     <Layout>
@@ -41,14 +65,21 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card 
+            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => navigate('/team')}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Teams You Manage</CardTitle>
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">Teams under your management</p>
+              <div className="text-2xl font-bold">
+                {team ? '1' : '0'}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {team ? `${team.name} - ${team.season_year}` : 'No team assigned'}
+              </p>
             </CardContent>
           </Card>
 
