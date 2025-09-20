@@ -129,7 +129,7 @@ export type Database = {
           id: string
           jersey_number: number
           last_name: string
-          position: string
+          positions: string[] | null
           team_id: string
           updated_at: string
           weight: number | null
@@ -143,7 +143,7 @@ export type Database = {
           id?: string
           jersey_number: number
           last_name: string
-          position: string
+          positions?: string[] | null
           team_id: string
           updated_at?: string
           weight?: number | null
@@ -157,7 +157,7 @@ export type Database = {
           id?: string
           jersey_number?: number
           last_name?: string
-          position?: string
+          positions?: string[] | null
           team_id?: string
           updated_at?: string
           weight?: number | null
