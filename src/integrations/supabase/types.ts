@@ -129,6 +129,7 @@ export type Database = {
           id: string
           jersey_number: number
           last_name: string
+          nickname: string | null
           positions: string[] | null
           team_id: string
           updated_at: string
@@ -143,6 +144,7 @@ export type Database = {
           id?: string
           jersey_number: number
           last_name: string
+          nickname?: string | null
           positions?: string[] | null
           team_id: string
           updated_at?: string
@@ -157,6 +159,7 @@ export type Database = {
           id?: string
           jersey_number?: number
           last_name?: string
+          nickname?: string | null
           positions?: string[] | null
           team_id?: string
           updated_at?: string

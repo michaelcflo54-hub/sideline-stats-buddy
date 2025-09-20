@@ -59,6 +59,7 @@ const PlayerManagement = () => {
       jersey_number: parseInt(formData.get('jersey-number') as string),
       first_name: formData.get('first-name') as string,
       last_name: formData.get('last-name') as string,
+      nickname: formData.get('nickname') as string || null,
       positions: selectedPositions, // Use array of positions
       weight: formData.get('weight') ? parseInt(formData.get('weight') as string) : null,
       height: formData.get('height') ? parseInt(formData.get('height') as string) : null,
@@ -215,6 +216,15 @@ const PlayerManagement = () => {
                     </div>
                   </div>
                   
+                  <div className="space-y-2">
+                    <Label htmlFor="nickname">Nickname</Label>
+                    <Input
+                      id="nickname"
+                      name="nickname"
+                      placeholder="Optional nickname"
+                    />
+                  </div>
+                  
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="jersey-number">Jersey #</Label>
@@ -299,9 +309,12 @@ const PlayerManagement = () => {
             <Card key={player.id}>
                <CardHeader className="pb-3">
                  <div className="flex items-center justify-between">
-                   <CardTitle className="text-lg">
-                     #{player.jersey_number} {player.first_name} {player.last_name}
-                   </CardTitle>
+                    <CardTitle className="text-lg">
+                      #{player.jersey_number} {player.first_name} {player.last_name}
+                      {player.nickname && (
+                        <span className="text-muted-foreground font-normal"> "{player.nickname}"</span>
+                      )}
+                    </CardTitle>
                    <div className="flex flex-wrap gap-1">
                      {player.positions?.map((position: string, index: number) => (
                        <Badge key={index} variant="secondary" className="text-xs">
@@ -384,6 +397,7 @@ const PlayerManagement = () => {
             <DialogTitle>Edit Player Positions</DialogTitle>
             <DialogDescription>
               Update positions for {editingPlayer?.first_name} {editingPlayer?.last_name}
+              {editingPlayer?.nickname && ` "${editingPlayer.nickname}"`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
