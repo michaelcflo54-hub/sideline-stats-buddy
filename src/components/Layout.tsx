@@ -70,9 +70,8 @@ const Layout = ({ children }: LayoutProps) => {
 
       <main className="container mx-auto px-4 py-8">
         {!profile?.team_id ? (
-          // If user is a coach, they can create a team, otherwise show contact message
-          profile?.role === 'head_coach' || profile?.role === 'assistant_coach' ? (
-            children // Let coaches access the app so they can create teams
+          (profile?.role === 'head_coach' || profile?.role === 'assistant_coach') ? (
+            children
           ) : (
             <Card className="max-w-md mx-auto">
               <CardHeader>
