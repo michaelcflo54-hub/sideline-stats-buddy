@@ -154,7 +154,7 @@ const GameDetails = () => {
       is_touchdown: formData.get('is-touchdown') === 'on',
       is_first_down: formData.get('is-first-down') === 'on',
       play_description: formData.get('play-description') as string,
-      penalty_type: formData.get('penalty-type') as string || null,
+      penalty_type: formData.get('penalty-type') as string === 'none' ? null : formData.get('penalty-type') as string,
       penalty_yards: parseInt(formData.get('penalty-yards') as string) || null,
       penalty_team: formData.get('penalty-team') as string || null,
       penalty_player: formData.get('penalty-player') as string || null,
@@ -487,7 +487,7 @@ const GameDetails = () => {
                           <SelectValue placeholder="Select penalty type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No Penalty</SelectItem>
+                          <SelectItem value="none">No Penalty</SelectItem>
                           <SelectItem value="holding">Holding</SelectItem>
                           <SelectItem value="false_start">False Start</SelectItem>
                           <SelectItem value="offside">Offside</SelectItem>
