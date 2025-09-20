@@ -14,16 +14,316 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      games: {
+        Row: {
+          created_at: string
+          field_condition: Database["public"]["Enums"]["field_condition"] | null
+          final_score_opponent: number | null
+          final_score_us: number | null
+          game_date: string
+          id: string
+          is_home_game: boolean
+          opponent_name: string
+          team_id: string
+          temperature: number | null
+          updated_at: string
+          weather_condition:
+            | Database["public"]["Enums"]["weather_condition"]
+            | null
+        }
+        Insert: {
+          created_at?: string
+          field_condition?:
+            | Database["public"]["Enums"]["field_condition"]
+            | null
+          final_score_opponent?: number | null
+          final_score_us?: number | null
+          game_date: string
+          id?: string
+          is_home_game?: boolean
+          opponent_name: string
+          team_id: string
+          temperature?: number | null
+          updated_at?: string
+          weather_condition?:
+            | Database["public"]["Enums"]["weather_condition"]
+            | null
+        }
+        Update: {
+          created_at?: string
+          field_condition?:
+            | Database["public"]["Enums"]["field_condition"]
+            | null
+          final_score_opponent?: number | null
+          final_score_us?: number | null
+          game_date?: string
+          id?: string
+          is_home_game?: boolean
+          opponent_name?: string
+          team_id?: string
+          temperature?: number | null
+          updated_at?: string
+          weather_condition?:
+            | Database["public"]["Enums"]["weather_condition"]
+            | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "games_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_stats: {
+        Row: {
+          created_at: string
+          id: string
+          play_id: string
+          player_id: string
+          stat_type: string
+          stat_value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          play_id: string
+          player_id: string
+          stat_type: string
+          stat_value?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          play_id?: string
+          player_id?: string
+          stat_type?: string
+          stat_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_stats_play_id_fkey"
+            columns: ["play_id"]
+            isOneToOne: false
+            referencedRelation: "plays"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_stats_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      players: {
+        Row: {
+          active: boolean
+          created_at: string
+          first_name: string
+          grade_level: number | null
+          height: number | null
+          id: string
+          jersey_number: number
+          last_name: string
+          position: string
+          team_id: string
+          updated_at: string
+          weight: number | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          first_name: string
+          grade_level?: number | null
+          height?: number | null
+          id?: string
+          jersey_number: number
+          last_name: string
+          position: string
+          team_id: string
+          updated_at?: string
+          weight?: number | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          first_name?: string
+          grade_level?: number | null
+          height?: number | null
+          id?: string
+          jersey_number?: number
+          last_name?: string
+          position?: string
+          team_id?: string
+          updated_at?: string
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "players_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plays: {
+        Row: {
+          created_at: string
+          distance: number
+          down: number
+          game_id: string
+          id: string
+          is_first_down: boolean
+          is_touchdown: boolean
+          is_turnover: boolean
+          play_description: string | null
+          play_type: Database["public"]["Enums"]["play_type"]
+          quarter: number
+          updated_at: string
+          yard_line: number
+          yards_gained: number
+        }
+        Insert: {
+          created_at?: string
+          distance: number
+          down: number
+          game_id: string
+          id?: string
+          is_first_down?: boolean
+          is_touchdown?: boolean
+          is_turnover?: boolean
+          play_description?: string | null
+          play_type: Database["public"]["Enums"]["play_type"]
+          quarter: number
+          updated_at?: string
+          yard_line: number
+          yards_gained?: number
+        }
+        Update: {
+          created_at?: string
+          distance?: number
+          down?: number
+          game_id?: string
+          id?: string
+          is_first_down?: boolean
+          is_touchdown?: boolean
+          is_turnover?: boolean
+          play_description?: string | null
+          play_type?: Database["public"]["Enums"]["play_type"]
+          quarter?: number
+          updated_at?: string
+          yard_line?: number
+          yards_gained?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plays_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          role: Database["public"]["Enums"]["user_role"]
+          team_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          role?: Database["public"]["Enums"]["user_role"]
+          team_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          team_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          season_year: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          season_year: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          season_year?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
+      get_user_team: {
+        Args: { _user_id: string }
+        Returns: string
+      }
     }
     Enums: {
-      [_ in never]: never
+      field_condition: "dry" | "wet" | "muddy" | "frozen"
+      play_type:
+        | "run"
+        | "pass"
+        | "punt"
+        | "field_goal"
+        | "kickoff"
+        | "extra_point"
+      user_role: "head_coach" | "assistant_coach" | "parent"
+      weather_condition: "clear" | "rain" | "snow" | "wind" | "fog"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +450,18 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      field_condition: ["dry", "wet", "muddy", "frozen"],
+      play_type: [
+        "run",
+        "pass",
+        "punt",
+        "field_goal",
+        "kickoff",
+        "extra_point",
+      ],
+      user_role: ["head_coach", "assistant_coach", "parent"],
+      weather_condition: ["clear", "rain", "snow", "wind", "fog"],
+    },
   },
 } as const
