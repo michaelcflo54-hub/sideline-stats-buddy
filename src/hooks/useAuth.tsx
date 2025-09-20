@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               .from('profiles')
               .select('*')
               .eq('user_id', session.user.id)
-              .single();
+              .maybeSingle();
             if (!profileData) {
               const meta = (session.user as any).user_metadata || {};
               const { data: newProfile } = await supabase
@@ -46,11 +46,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                   user_id: session.user.id,
                   first_name: meta.first_name ?? '',
                   last_name: meta.last_name ?? '',
-                  email: session.user.email,
+                  email: session.user.email ?? '',
                   role: meta.role ?? 'parent',
                 })
                 .select('*')
-                .single();
+                .maybeSingle();
               setProfile(newProfile ?? null);
             } else {
               setProfile(profileData);
@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             .from('profiles')
             .select('*')
             .eq('user_id', session.user.id)
-            .single();
+            .maybeSingle();
           if (!profileData) {
             const meta = (session.user as any).user_metadata || {};
             const { data: newProfile } = await supabase
@@ -84,11 +84,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 user_id: session.user.id,
                 first_name: meta.first_name ?? '',
                 last_name: meta.last_name ?? '',
-                email: session.user.email,
+                email: session.user.email ?? '',
                 role: meta.role ?? 'parent',
               })
               .select('*')
-              .single();
+              .maybeSingle();
             setProfile(newProfile ?? null);
           } else {
             setProfile(profileData ?? null);
