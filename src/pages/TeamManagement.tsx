@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Users, Mail, Settings, BookOpen, ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Users, Mail, Settings, BookOpen, ArrowLeft, Calendar as CalendarIcon, Edit, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const TeamManagement = () => {
@@ -29,7 +29,10 @@ const TeamManagement = () => {
   const [showInviteUser, setShowInviteUser] = useState(false);
   const [showChangeRole, setShowChangeRole] = useState(false);
   const [showScheduleGame, setShowScheduleGame] = useState(false);
+  const [showEditGame, setShowEditGame] = useState(false);
+  const [editingGame, setEditingGame] = useState<any>(null);
   const [gameDate, setGameDate] = useState<Date>();
+  const [editGameDate, setEditGameDate] = useState<Date>();
   const [newRole, setNewRole] = useState<'head_coach' | 'assistant_coach' | 'parent' | ''>('');
 
   const canManageTeam = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
@@ -178,6 +181,82 @@ const TeamManagement = () => {
     } catch (error: any) {
       toast({
         title: "Error updating role",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteGame = async (gameId: string, gameName: string) => {
+    if (!confirm(`Are you sure you want to delete the game vs ${gameName}?`)) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('games')
+        .delete()
+        .eq('id', gameId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Game deleted!",
+        description: `Game vs ${gameName} has been deleted.`
+      });
+
+      fetchTeamData();
+    } catch (error: any) {
+      toast({
+        title: "Error deleting game",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditGame = (game: any) => {
+    setEditingGame(game);
+    setEditGameDate(new Date(game.game_date));
+    setShowEditGame(true);
+  };
+
+  const editGame = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingGame) return;
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const gameData = {
+      opponent_name: formData.get('opponent-name') as string,
+      game_date: editGameDate ? format(editGameDate, 'yyyy-MM-dd') : editingGame.game_date,
+      is_home_game: formData.get('game-type') === 'home',
+    };
+
+    try {
+      const { error } = await supabase
+        .from('games')
+        .update(gameData)
+        .eq('id', editingGame.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Game updated!",
+        description: `Game vs ${gameData.opponent_name} has been updated.`
+      });
+
+      setShowEditGame(false);
+      setEditingGame(null);
+      setEditGameDate(undefined);
+      fetchTeamData();
+      (e.target as HTMLFormElement).reset();
+    } catch (error: any) {
+      toast({
+        title: "Error updating game",
         description: error.message,
         variant: "destructive"
       });
@@ -501,11 +580,13 @@ const TeamManagement = () => {
               {games.map((game) => (
                 <div
                   key={game.id}
-                  className="p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                  onClick={() => navigate(`/game/${game.id}`)}
+                  className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div 
+                      className="flex-1 cursor-pointer"
+                      onClick={() => navigate(`/game/${game.id}`)}
+                    >
                       <div className="font-medium">
                         vs {game.opponent_name}
                       </div>
@@ -516,13 +597,41 @@ const TeamManagement = () => {
                         </Badge>
                       </div>
                     </div>
-                    <div className="text-right">
-                      {game.final_score_us !== null && game.final_score_opponent !== null ? (
-                        <div className="text-lg font-bold">
-                          {game.final_score_us} - {game.final_score_opponent}
+                    <div className="flex items-center gap-2">
+                      <div className="text-right mr-2">
+                        {game.final_score_us !== null && game.final_score_opponent !== null ? (
+                          <div className="text-lg font-bold">
+                            {game.final_score_us} - {game.final_score_opponent}
+                          </div>
+                        ) : (
+                          <Badge variant="secondary">Scheduled</Badge>
+                        )}
+                      </div>
+                      {canManageTeam && (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditGame(game);
+                            }}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteGame(game.id, game.opponent_name);
+                            }}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         </div>
-                      ) : (
-                        <Badge variant="secondary">Scheduled</Badge>
                       )}
                     </div>
                   </div>
@@ -574,6 +683,77 @@ const TeamManagement = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Edit Game Dialog */}
+        <Dialog open={showEditGame} onOpenChange={(open) => {
+          setShowEditGame(open);
+          if (!open) {
+            setEditingGame(null);
+            setEditGameDate(undefined);
+          }
+        }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Game</DialogTitle>
+              <DialogDescription>
+                Update the game details.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={editGame} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-opponent-name">Opponent Name</Label>
+                <Input
+                  id="edit-opponent-name"
+                  name="opponent-name"
+                  defaultValue={editingGame?.opponent_name}
+                  placeholder="e.g., Eagles U12"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Game Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {editGameDate ? format(editGameDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={editGameDate}
+                      onSelect={setEditGameDate}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-game-type">Game Type</Label>
+                <Select name="game-type" defaultValue={editingGame?.is_home_game ? 'home' : 'away'}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select game type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="home">Home Game</SelectItem>
+                    <SelectItem value="away">Away Game</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Updating...' : 'Update Game'}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         {/* Schedule Game Dialog */}
         <Dialog open={showScheduleGame} onOpenChange={(open) => {
