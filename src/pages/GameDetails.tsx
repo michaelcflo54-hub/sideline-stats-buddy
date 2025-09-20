@@ -44,6 +44,10 @@ interface PlayData {
   is_touchdown: boolean;
   is_first_down: boolean;
   play_description?: string;
+  penalty_type?: string;
+  penalty_yards?: number;
+  penalty_team?: 'us' | 'opponent';
+  penalty_player?: string;
   created_at: string;
 }
 
@@ -91,7 +95,10 @@ const GameDetails = () => {
         .order('created_at');
 
       if (playsError) throw playsError;
-      setPlays(playsData || []);
+      setPlays((playsData || []).map(play => ({
+        ...play,
+        penalty_team: play.penalty_team as 'us' | 'opponent' | undefined
+      })));
     } catch (error) {
       console.error('Error fetching game data:', error);
       toast({
@@ -147,6 +154,10 @@ const GameDetails = () => {
       is_touchdown: formData.get('is-touchdown') === 'on',
       is_first_down: formData.get('is-first-down') === 'on',
       play_description: formData.get('play-description') as string,
+      penalty_type: formData.get('penalty-type') as string || null,
+      penalty_yards: parseInt(formData.get('penalty-yards') as string) || null,
+      penalty_team: formData.get('penalty-team') as string || null,
+      penalty_player: formData.get('penalty-player') as string || null,
     };
 
     try {
@@ -465,6 +476,69 @@ const GameDetails = () => {
                   </div>
                 </div>
 
+                {/* Penalty Section */}
+                <div className="border-t pt-4">
+                  <h4 className="font-medium mb-3">Penalty (Optional)</h4>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="penalty-type">Penalty Type</Label>
+                      <Select name="penalty-type">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select penalty type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No Penalty</SelectItem>
+                          <SelectItem value="holding">Holding</SelectItem>
+                          <SelectItem value="false_start">False Start</SelectItem>
+                          <SelectItem value="offside">Offside</SelectItem>
+                          <SelectItem value="pass_interference">Pass Interference</SelectItem>
+                          <SelectItem value="roughing_passer">Roughing the Passer</SelectItem>
+                          <SelectItem value="unsportsmanlike">Unsportsmanlike Conduct</SelectItem>
+                          <SelectItem value="illegal_formation">Illegal Formation</SelectItem>
+                          <SelectItem value="delay_of_game">Delay of Game</SelectItem>
+                          <SelectItem value="encroachment">Encroachment</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="penalty-yards">Penalty Yards</Label>
+                        <Input
+                          id="penalty-yards"
+                          name="penalty-yards"
+                          type="number"
+                          placeholder="5"
+                          min="0"
+                          max="50"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="penalty-team">Penalized Team</Label>
+                        <Select name="penalty-team">
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select team" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="us">Our Team</SelectItem>
+                            <SelectItem value="opponent">Opponent</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="penalty-player">Player (Optional)</Label>
+                      <Input
+                        id="penalty-player"
+                        name="penalty-player"
+                        placeholder="Player name or number"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Recording...' : 'Record Play'}
                 </Button>
@@ -509,6 +583,12 @@ const GameDetails = () => {
                         <div className="text-sm text-muted-foreground capitalize">
                           {play.play_type.replace('_', ' ')} play
                         </div>
+                        {play.penalty_type && (
+                          <div className="text-sm text-red-600 mt-1">
+                            🚩 {play.penalty_type.replace('_', ' ')} - {play.penalty_yards} yards ({play.penalty_team === 'us' ? 'Our Team' : 'Opponent'})
+                            {play.penalty_player && ` - ${play.penalty_player}`}
+                          </div>
+                        )}
                         {play.play_description && (
                           <div className="text-sm text-muted-foreground mt-1">
                             {play.play_description}

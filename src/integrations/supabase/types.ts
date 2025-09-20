@@ -185,6 +185,10 @@ export type Database = {
           is_first_down: boolean
           is_touchdown: boolean
           is_turnover: boolean
+          penalty_player: string | null
+          penalty_team: string | null
+          penalty_type: string | null
+          penalty_yards: number | null
           play_description: string | null
           play_type: Database["public"]["Enums"]["play_type"]
           quarter: number
@@ -201,6 +205,10 @@ export type Database = {
           is_first_down?: boolean
           is_touchdown?: boolean
           is_turnover?: boolean
+          penalty_player?: string | null
+          penalty_team?: string | null
+          penalty_type?: string | null
+          penalty_yards?: number | null
           play_description?: string | null
           play_type: Database["public"]["Enums"]["play_type"]
           quarter: number
@@ -217,6 +225,10 @@ export type Database = {
           is_first_down?: boolean
           is_touchdown?: boolean
           is_turnover?: boolean
+          penalty_player?: string | null
+          penalty_team?: string | null
+          penalty_type?: string | null
+          penalty_yards?: number | null
           play_description?: string | null
           play_type?: Database["public"]["Enums"]["play_type"]
           quarter?: number
