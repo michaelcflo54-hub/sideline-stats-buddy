@@ -408,7 +408,7 @@ const TeamManagement = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Team Members ({teamMembers.length})
+              Coaches ({teamMembers.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
