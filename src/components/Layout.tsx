@@ -63,7 +63,7 @@ const Layout = ({ children }: LayoutProps) => {
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Down & Distance Aid</h1>
+            <h1 className="text-2xl font-bold">Down & Distance</h1>
             <p className="text-sm text-muted-foreground">Youth Football Analytics</p>
           </div>
           <div className="flex items-center gap-4">
