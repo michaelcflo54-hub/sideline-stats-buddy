@@ -25,24 +25,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile
+          // Fetch user profile (defer supabase call)
+          setLoading(true);
           setTimeout(async () => {
             const { data: profileData } = await supabase
               .from('profiles')
               .select('*')
               .eq('user_id', session.user.id)
               .single();
-            setProfile(profileData);
+            if (!profileData) {
+              const meta = (session.user as any).user_metadata || {};
+              const { data: newProfile } = await supabase
+                .from('profiles')
+                .insert({
+                  user_id: session.user.id,
+                  first_name: meta.first_name ?? '',
+                  last_name: meta.last_name ?? '',
+                  email: session.user.email,
+                  role: meta.role ?? 'parent',
+                })
+                .select('*')
+                .single();
+              setProfile(newProfile ?? null);
+            } else {
+              setProfile(profileData);
+            }
+            setLoading(false);
           }, 0);
         } else {
           setProfile(null);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
@@ -51,16 +69,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        setLoading(true);
         setTimeout(async () => {
           const { data: profileData } = await supabase
             .from('profiles')
             .select('*')
             .eq('user_id', session.user.id)
             .single();
-          setProfile(profileData);
+          if (!profileData) {
+            const meta = (session.user as any).user_metadata || {};
+            const { data: newProfile } = await supabase
+              .from('profiles')
+              .insert({
+                user_id: session.user.id,
+                first_name: meta.first_name ?? '',
+                last_name: meta.last_name ?? '',
+                email: session.user.email,
+                role: meta.role ?? 'parent',
+              })
+              .select('*')
+              .single();
+            setProfile(newProfile ?? null);
+          } else {
+            setProfile(profileData ?? null);
+          }
+          setLoading(false);
         }, 0);
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
