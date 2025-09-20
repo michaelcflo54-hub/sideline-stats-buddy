@@ -9,9 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Users, Mail, Settings, BookOpen } from 'lucide-react';
+import { Plus, Users, Mail, Settings, BookOpen, ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
 
 const TeamManagement = () => {
   const { profile } = useAuth();
@@ -20,10 +23,13 @@ const TeamManagement = () => {
   const [team, setTeam] = useState<any>(null);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [players, setPlayers] = useState<any[]>([]);
+  const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [showInviteUser, setShowInviteUser] = useState(false);
   const [showChangeRole, setShowChangeRole] = useState(false);
+  const [showScheduleGame, setShowScheduleGame] = useState(false);
+  const [gameDate, setGameDate] = useState<Date>();
   const [newRole, setNewRole] = useState<'head_coach' | 'assistant_coach' | 'parent' | ''>('');
 
   const canManageTeam = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
@@ -62,6 +68,15 @@ const TeamManagement = () => {
         .order('jersey_number');
       
       setPlayers(playersData || []);
+
+      // Fetch games/schedule
+      const { data: gamesData } = await supabase
+        .from('games')
+        .select('*')
+        .eq('team_id', profile.team_id)
+        .order('game_date');
+      
+      setGames(gamesData || []);
     } catch (error) {
       console.error('Error fetching team data:', error);
     }
@@ -171,6 +186,45 @@ const TeamManagement = () => {
     }
   };
 
+  const scheduleGame = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const gameData = {
+      team_id: profile.team_id,
+      opponent_name: formData.get('opponent-name') as string,
+      game_date: gameDate ? format(gameDate, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0],
+      is_home_game: formData.get('game-type') === 'home',
+    };
+
+    try {
+      const { error } = await supabase
+        .from('games')
+        .insert(gameData);
+
+      if (error) throw error;
+
+      toast({
+        title: "Game scheduled!",
+        description: `Game vs ${gameData.opponent_name} has been scheduled.`
+      });
+
+      setShowScheduleGame(false);
+      setGameDate(undefined);
+      fetchTeamData();
+      (e.target as HTMLFormElement).reset();
+    } catch (error: any) {
+      toast({
+        title: "Error scheduling game",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatRole = (role: string) => {
     return role.split('_').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
@@ -247,11 +301,21 @@ const TeamManagement = () => {
     <Layout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-3xl font-bold">Team Management</h2>
-            <p className="text-muted-foreground">
-              {team ? `Manage ${team.name} - ${team.season_year} Season` : 'Loading team...'}
-            </p>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/')}
+              className="rounded-full"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h2 className="text-3xl font-bold">Team Management</h2>
+              <p className="text-muted-foreground">
+                {team ? `Manage ${team.name} - ${team.season_year} Season` : 'Loading team...'}
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
             {canManageTeam && (
@@ -417,6 +481,70 @@ const TeamManagement = () => {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <CalendarIcon className="h-5 w-5" />
+                Schedule ({games.length})
+              </CardTitle>
+              {canManageTeam && (
+                <Button onClick={() => setShowScheduleGame(true)} size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Schedule Game
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {games.map((game) => (
+                <div
+                  key={game.id}
+                  className="p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                  onClick={() => navigate(`/game/${game.id}`)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">
+                        vs {game.opponent_name}
+                      </div>
+                      <div className="text-sm text-muted-foreground flex items-center gap-4">
+                        <span>{new Date(game.game_date).toLocaleDateString()}</span>
+                        <Badge variant={game.is_home_game ? 'default' : 'outline'}>
+                          {game.is_home_game ? 'Home' : 'Away'}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      {game.final_score_us !== null && game.final_score_opponent !== null ? (
+                        <div className="text-lg font-bold">
+                          {game.final_score_us} - {game.final_score_opponent}
+                        </div>
+                      ) : (
+                        <Badge variant="secondary">Scheduled</Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {games.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No games scheduled yet.
+                  {canManageTeam && (
+                    <div className="mt-2">
+                      <Button onClick={() => setShowScheduleGame(true)} variant="outline">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Schedule First Game
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {canManageTeam && (
           <Card>
             <CardHeader>
@@ -446,6 +574,73 @@ const TeamManagement = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Schedule Game Dialog */}
+        <Dialog open={showScheduleGame} onOpenChange={(open) => {
+          setShowScheduleGame(open);
+          if (!open) setGameDate(undefined);
+        }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Schedule New Game</DialogTitle>
+              <DialogDescription>
+                Add a new game to your team's schedule.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={scheduleGame} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="opponent-name">Opponent Name</Label>
+                <Input
+                  id="opponent-name"
+                  name="opponent-name"
+                  placeholder="e.g., Eagles U12"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Game Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {gameDate ? format(gameDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={gameDate}
+                      onSelect={setGameDate}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="game-type">Game Type</Label>
+                <Select name="game-type" defaultValue="home">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select game type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="home">Home Game</SelectItem>
+                    <SelectItem value="away">Away Game</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Scheduling...' : 'Schedule Game'}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
