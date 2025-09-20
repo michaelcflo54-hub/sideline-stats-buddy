@@ -139,7 +139,7 @@ const PlayerManagement = () => {
                         id="jersey-number"
                         name="jersey-number"
                         type="number"
-                        min="1"
+                        min="0"
                         max="99"
                         required
                       />
