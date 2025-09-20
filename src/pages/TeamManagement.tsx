@@ -17,6 +17,7 @@ const TeamManagement = () => {
   const { toast } = useToast();
   const [team, setTeam] = useState<any>(null);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [showInviteUser, setShowInviteUser] = useState(false);
@@ -42,13 +43,23 @@ const TeamManagement = () => {
       
       setTeam(teamData);
 
-      // Fetch team members
+      // Fetch team members (coaches and parents)
       const { data: membersData } = await supabase
         .from('profiles')
         .select('*')
         .eq('team_id', profile.team_id);
       
       setTeamMembers(membersData || []);
+
+      // Fetch players
+      const { data: playersData } = await supabase
+        .from('players')
+        .select('*')
+        .eq('team_id', profile.team_id)
+        .eq('active', true)
+        .order('jersey_number');
+      
+      setPlayers(playersData || []);
     } catch (error) {
       console.error('Error fetching team data:', error);
     }
@@ -345,6 +356,49 @@ const TeamManagement = () => {
               {teamMembers.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   No team members yet. Invite coaches to get started!
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Players ({players.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {players.map((player) => (
+                <div key={player.id} className="p-4 border rounded-lg">
+                  <div className="font-medium text-lg mb-2">
+                    #{player.jersey_number} {player.first_name} {player.last_name}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-1">
+                      {player.positions?.map((position: string, index: number) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {position}
+                        </Badge>
+                      ))}
+                    </div>
+                    {player.grade_level && (
+                      <div className="text-sm text-muted-foreground">
+                        Grade: {player.grade_level}
+                      </div>
+                    )}
+                    <div className="text-sm text-muted-foreground flex gap-4">
+                      {player.weight && <span>Weight: {player.weight} lbs</span>}
+                      {player.height && <span>Height: {Math.floor(player.height / 12)}'{player.height % 12}"</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {players.length === 0 && (
+                <div className="col-span-full text-center py-8 text-muted-foreground">
+                  No players yet. Add players to get started!
                 </div>
               )}
             </div>

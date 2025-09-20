@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Users, Edit, ArrowLeft } from 'lucide-react';
@@ -20,6 +21,7 @@ const PlayerManagement = () => {
   const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
+  const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
 
   const canManage = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
 
@@ -55,11 +57,21 @@ const PlayerManagement = () => {
       jersey_number: parseInt(formData.get('jersey-number') as string),
       first_name: formData.get('first-name') as string,
       last_name: formData.get('last-name') as string,
-      position: formData.get('position') as string,
+      positions: selectedPositions, // Use array of positions
       weight: formData.get('weight') ? parseInt(formData.get('weight') as string) : null,
       height: formData.get('height') ? parseInt(formData.get('height') as string) : null,
       grade_level: formData.get('grade-level') ? parseInt(formData.get('grade-level') as string) : null,
     };
+
+    if (selectedPositions.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one position.",
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
+    }
 
     try {
       const { error } = await supabase
@@ -74,6 +86,7 @@ const PlayerManagement = () => {
       });
 
       setShowAddPlayer(false);
+      setSelectedPositions([]);
       fetchPlayers();
       (e.target as HTMLFormElement).reset();
     } catch (error: any) {
@@ -90,6 +103,14 @@ const PlayerManagement = () => {
   const positions = [
     'QB', 'RB', 'FB', 'WR', 'TE', 'C', 'G', 'T', 'DE', 'DT', 'LB', 'CB', 'S', 'K', 'P'
   ];
+
+  const handlePositionChange = (position: string, checked: boolean) => {
+    setSelectedPositions(prev => 
+      checked 
+        ? [...prev, position]
+        : prev.filter(p => p !== position)
+    );
+  };
 
   return (
     <Layout>
@@ -110,7 +131,10 @@ const PlayerManagement = () => {
             </div>
           </div>
           {canManage && (
-            <Dialog open={showAddPlayer} onOpenChange={setShowAddPlayer}>
+            <Dialog open={showAddPlayer} onOpenChange={(open) => {
+              setShowAddPlayer(open);
+              if (!open) setSelectedPositions([]);
+            }}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
@@ -156,18 +180,29 @@ const PlayerManagement = () => {
                         required
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="position">Position</Label>
-                      <Select name="position" required>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select position" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {positions.map(pos => (
-                            <SelectItem key={pos} value={pos}>{pos}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div className="col-span-2 space-y-2">
+                      <Label>Positions</Label>
+                      <div className="grid grid-cols-3 gap-2 p-3 border rounded-lg max-h-32 overflow-y-auto">
+                        {positions.map(pos => (
+                          <div key={pos} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={pos}
+                              checked={selectedPositions.includes(pos)}
+                              onCheckedChange={(checked) => 
+                                handlePositionChange(pos, checked as boolean)
+                              }
+                            />
+                            <Label htmlFor={pos} className="text-sm cursor-pointer">
+                              {pos}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                      {selectedPositions.length === 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Select at least one position
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -215,14 +250,20 @@ const PlayerManagement = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {players.map((player) => (
             <Card key={player.id}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">
-                    #{player.jersey_number} {player.first_name} {player.last_name}
-                  </CardTitle>
-                  <Badge variant="secondary">{player.position}</Badge>
-                </div>
-              </CardHeader>
+               <CardHeader className="pb-3">
+                 <div className="flex items-center justify-between">
+                   <CardTitle className="text-lg">
+                     #{player.jersey_number} {player.first_name} {player.last_name}
+                   </CardTitle>
+                   <div className="flex flex-wrap gap-1">
+                     {player.positions?.map((position: string, index: number) => (
+                       <Badge key={index} variant="secondary" className="text-xs">
+                         {position}
+                       </Badge>
+                     ))}
+                   </div>
+                 </div>
+               </CardHeader>
               <CardContent className="pt-0">
                 <div className="space-y-2 text-sm">
                   {player.grade_level && (
