@@ -11,13 +11,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, ArrowLeft, BookOpen, Target, Zap, Shield } from 'lucide-react';
+import { Plus, ArrowLeft, BookOpen, Target, Zap, Shield, Edit } from 'lucide-react';
 
 interface Play {
   id: string;
   name: string;
   description: string;
   category: 'offense' | 'defense' | 'special_teams';
+  direction?: 'left' | 'right' | 'center';
   formation?: string;
   created_at: string;
   team_id: string;
@@ -30,6 +31,8 @@ const PlaybookManagement = () => {
   const [plays, setPlays] = useState<Play[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddPlay, setShowAddPlay] = useState(false);
+  const [showEditPlay, setShowEditPlay] = useState(false);
+  const [editingPlay, setEditingPlay] = useState<Play | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const canManage = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
@@ -63,6 +66,7 @@ const PlaybookManagement = () => {
       name: formData.get('play-name') as string,
       description: formData.get('description') as string,
       category: formData.get('category') as 'offense' | 'defense' | 'special_teams',
+      direction: formData.get('direction') as 'left' | 'right' | 'center' || undefined,
       formation: formData.get('formation') as string || undefined,
       created_at: new Date().toISOString(),
       team_id: profile.team_id
@@ -85,6 +89,53 @@ const PlaybookManagement = () => {
     } catch (error: any) {
       toast({
         title: "Error adding play",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditPlay = (play: Play) => {
+    setEditingPlay(play);
+    setShowEditPlay(true);
+  };
+
+  const editPlay = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingPlay) return;
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const updatedPlay: Play = {
+      ...editingPlay,
+      name: formData.get('play-name') as string,
+      description: formData.get('description') as string,
+      category: formData.get('category') as 'offense' | 'defense' | 'special_teams',
+      direction: formData.get('direction') as 'left' | 'right' | 'center' || undefined,
+      formation: formData.get('formation') as string || undefined,
+    };
+
+    try {
+      const updatedPlays = plays.map(play => 
+        play.id === editingPlay.id ? updatedPlay : play
+      );
+      setPlays(updatedPlays);
+      
+      // Save to localStorage (in a real app, this would go to Supabase)
+      localStorage.setItem(`playbook_${profile.team_id}`, JSON.stringify(updatedPlays));
+
+      toast({
+        title: "Play updated!",
+        description: `${updatedPlay.name} has been updated.`
+      });
+
+      setShowEditPlay(false);
+      setEditingPlay(null);
+    } catch (error: any) {
+      toast({
+        title: "Error updating play",
         description: error.message,
         variant: "destructive"
       });
@@ -197,6 +248,19 @@ const PlaybookManagement = () => {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="direction">Direction</Label>
+                  <select 
+                    name="direction" 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">Select direction (optional)</option>
+                    <option value="left">Left</option>
+                    <option value="right">Right</option>
+                    <option value="center">Center</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="formation">Formation (Optional)</Label>
                   <Input
                     id="formation"
@@ -223,6 +287,87 @@ const PlaybookManagement = () => {
             </DialogContent>
           </Dialog>
         </div>
+
+        {/* Edit Play Dialog */}
+        <Dialog open={showEditPlay} onOpenChange={(open) => {
+          setShowEditPlay(open);
+          if (!open) setEditingPlay(null);
+        }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Play</DialogTitle>
+              <DialogDescription>
+                Update the play details in your playbook.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={editPlay} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-play-name">Play Name</Label>
+                <Input
+                  id="edit-play-name"
+                  name="play-name"
+                  defaultValue={editingPlay?.name}
+                  placeholder="e.g., Power Run Left"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-category">Category</Label>
+                <select 
+                  name="category" 
+                  defaultValue={editingPlay?.category}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  required
+                >
+                  <option value="offense">Offense</option>
+                  <option value="defense">Defense</option>
+                  <option value="special_teams">Special Teams</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-direction">Direction</Label>
+                <select 
+                  name="direction" 
+                  defaultValue={editingPlay?.direction || ''}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Select direction (optional)</option>
+                  <option value="left">Left</option>
+                  <option value="right">Right</option>
+                  <option value="center">Center</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-formation">Formation (Optional)</Label>
+                <Input
+                  id="edit-formation"
+                  name="formation"
+                  defaultValue={editingPlay?.formation}
+                  placeholder="e.g., I-Formation, 4-3 Defense"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  name="description"
+                  defaultValue={editingPlay?.description}
+                  placeholder="Describe the play execution, key points, etc."
+                  className="min-h-[100px]"
+                  required
+                />
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Updating...' : 'Update Play'}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         {/* Category Filter */}
         <div className="flex gap-2">
@@ -266,25 +411,40 @@ const PlaybookManagement = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredPlays.map((play) => (
             <Card key={play.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{play.name}</CardTitle>
-                    {play.formation && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {play.formation}
-                      </p>
-                    )}
-                  </div>
-                  <Badge 
-                    variant="secondary" 
-                    className={`${getCategoryColor(play.category)} text-white gap-1`}
-                  >
-                    {getCategoryIcon(play.category)}
-                    {play.category.replace('_', ' ')}
-                  </Badge>
-                </div>
-              </CardHeader>
+               <CardHeader className="pb-3">
+                 <div className="flex items-start justify-between">
+                   <div>
+                     <CardTitle className="text-lg">{play.name}</CardTitle>
+                     {play.formation && (
+                       <p className="text-sm text-muted-foreground mt-1">
+                         {play.formation}
+                       </p>
+                     )}
+                     {play.direction && (
+                       <p className="text-sm text-muted-foreground mt-1 capitalize">
+                         Direction: {play.direction}
+                       </p>
+                     )}
+                   </div>
+                   <div className="flex flex-col gap-2">
+                     <Badge 
+                       variant="secondary" 
+                       className={`${getCategoryColor(play.category)} text-white gap-1`}
+                     >
+                       {getCategoryIcon(play.category)}
+                       {play.category.replace('_', ' ')}
+                     </Badge>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => handleEditPlay(play)}
+                       className="h-7 w-7 p-0"
+                     >
+                       <Edit className="h-3 w-3" />
+                     </Button>
+                   </div>
+                 </div>
+               </CardHeader>
               <CardContent className="pt-0">
                 <p className="text-sm text-muted-foreground line-clamp-3">
                   {play.description}
