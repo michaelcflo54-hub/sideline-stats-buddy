@@ -24,6 +24,7 @@ const PlayerManagement = () => {
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
   const [editingPlayer, setEditingPlayer] = useState<any>(null);
   const [showEditPlayer, setShowEditPlayer] = useState(false);
+  const [editSelectedPositions, setEditSelectedPositions] = useState<string[]>([]);
 
   const canManage = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
 
@@ -115,14 +116,23 @@ const PlayerManagement = () => {
     );
   };
 
+  const handleEditPositionChange = (position: string, checked: boolean) => {
+    setEditSelectedPositions(prev => 
+      checked 
+        ? [...prev, position]
+        : prev.filter(p => p !== position)
+    );
+  };
+
   const handleEditPlayer = (player: any) => {
     setEditingPlayer(player);
-    setSelectedPositions(player.positions || []);
+    setEditSelectedPositions(player.positions || []);
     setShowEditPlayer(true);
   };
 
-  const updatePlayerPositions = async () => {
-    if (!editingPlayer || selectedPositions.length === 0) {
+  const updatePlayer = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingPlayer || editSelectedPositions.length === 0) {
       toast({
         title: "Error",
         description: "Please select at least one position.",
@@ -132,26 +142,39 @@ const PlayerManagement = () => {
     }
 
     setLoading(true);
+    const formData = new FormData(e.currentTarget);
+    
+    const updatedPlayerData = {
+      first_name: formData.get('edit-first-name') as string,
+      last_name: formData.get('edit-last-name') as string,
+      nickname: formData.get('edit-nickname') as string || null,
+      jersey_number: parseInt(formData.get('edit-jersey-number') as string),
+      positions: editSelectedPositions,
+      grade_level: formData.get('edit-grade-level') ? parseInt(formData.get('edit-grade-level') as string) : null,
+      weight: formData.get('edit-weight') ? parseInt(formData.get('edit-weight') as string) : null,
+      height: formData.get('edit-height') ? parseInt(formData.get('edit-height') as string) : null,
+    };
+
     try {
       const { error } = await supabase
         .from('players')
-        .update({ positions: selectedPositions })
+        .update(updatedPlayerData)
         .eq('id', editingPlayer.id);
 
       if (error) throw error;
 
       toast({
-        title: "Positions updated!",
-        description: `${editingPlayer.first_name} ${editingPlayer.last_name}'s positions have been updated.`
+        title: "Player updated!",
+        description: `${updatedPlayerData.first_name} ${updatedPlayerData.last_name}'s information has been updated.`
       });
 
       setShowEditPlayer(false);
       setEditingPlayer(null);
-      setSelectedPositions([]);
+      setEditSelectedPositions([]);
       fetchPlayers();
     } catch (error: any) {
       toast({
-        title: "Error updating positions",
+        title: "Error updating player",
         description: error.message,
         variant: "destructive"
       });
@@ -347,15 +370,15 @@ const PlayerManagement = () => {
                  </div>
                  {canManage && (
                    <div className="mt-3 pt-3 border-t">
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       className="w-full"
-                       onClick={() => handleEditPlayer(player)}
-                     >
-                       <Edit className="mr-2 h-3 w-3" />
-                       Edit Positions
-                     </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => handleEditPlayer(player)}
+                        >
+                          <Edit className="mr-2 h-3 w-3" />
+                          Edit Player
+                        </Button>
                    </div>
                  )}
                </CardContent>
@@ -384,61 +407,136 @@ const PlayerManagement = () => {
         )}
       </div>
 
-      {/* Edit Player Positions Dialog */}
+      {/* Edit Player Dialog */}
       <Dialog open={showEditPlayer} onOpenChange={(open) => {
         setShowEditPlayer(open);
         if (!open) {
           setEditingPlayer(null);
-          setSelectedPositions([]);
+          setEditSelectedPositions([]);
         }
       }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit Player Positions</DialogTitle>
+            <DialogTitle>Edit Player Information</DialogTitle>
             <DialogDescription>
-              Update positions for {editingPlayer?.first_name} {editingPlayer?.last_name}
+              Update information for {editingPlayer?.first_name} {editingPlayer?.last_name}
               {editingPlayer?.nickname && ` "${editingPlayer.nickname}"`}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Current Jersey Number</Label>
-              <p className="text-sm text-muted-foreground">
-                #{editingPlayer?.jersey_number}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>Positions</Label>
-              <div className="grid grid-cols-3 gap-2 p-3 border rounded-lg max-h-32 overflow-y-auto">
-                {positions.map(pos => (
-                  <div key={pos} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`edit-${pos}`}
-                      checked={selectedPositions.includes(pos)}
-                      onCheckedChange={(checked) => 
-                        handlePositionChange(pos, checked as boolean)
-                      }
-                    />
-                    <Label htmlFor={`edit-${pos}`} className="text-sm cursor-pointer">
-                      {pos}
-                    </Label>
-                  </div>
-                ))}
+          <form onSubmit={updatePlayer} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-first-name">First Name</Label>
+                <Input
+                  id="edit-first-name"
+                  name="edit-first-name"
+                  defaultValue={editingPlayer?.first_name || ''}
+                  required
+                />
               </div>
-              {selectedPositions.length === 0 && (
-                <p className="text-xs text-red-500">
-                  Select at least one position
-                </p>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="edit-last-name">Last Name</Label>
+                <Input
+                  id="edit-last-name"
+                  name="edit-last-name"
+                  defaultValue={editingPlayer?.last_name || ''}
+                  required
+                />
+              </div>
             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit-nickname">Nickname</Label>
+              <Input
+                id="edit-nickname"
+                name="edit-nickname"
+                defaultValue={editingPlayer?.nickname || ''}
+                placeholder="Optional nickname"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-jersey-number">Jersey #</Label>
+                <Input
+                  id="edit-jersey-number"
+                  name="edit-jersey-number"
+                  type="number"
+                  min="0"
+                  max="99"
+                  defaultValue={editingPlayer?.jersey_number || ''}
+                  required
+                />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label>Positions</Label>
+                <div className="grid grid-cols-3 gap-2 p-3 border rounded-lg max-h-32 overflow-y-auto">
+                  {positions.map(pos => (
+                    <div key={pos} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`edit-${pos}`}
+                        checked={editSelectedPositions.includes(pos)}
+                        onCheckedChange={(checked) => 
+                          handleEditPositionChange(pos, checked as boolean)
+                        }
+                      />
+                      <Label htmlFor={`edit-${pos}`} className="text-sm cursor-pointer">
+                        {pos}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                {editSelectedPositions.length === 0 && (
+                  <p className="text-xs text-red-500">
+                    Select at least one position
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-grade-level">Grade</Label>
+                <Input
+                  id="edit-grade-level"
+                  name="edit-grade-level"
+                  type="number"
+                  min="1"
+                  max="12"
+                  defaultValue={editingPlayer?.grade_level || ''}
+                  placeholder="9"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-weight">Weight</Label>
+                <Input
+                  id="edit-weight"
+                  name="edit-weight"
+                  type="number"
+                  defaultValue={editingPlayer?.weight || ''}
+                  placeholder="150"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-height">Height (in)</Label>
+                <Input
+                  id="edit-height"
+                  name="edit-height"
+                  type="number"
+                  defaultValue={editingPlayer?.height || ''}
+                  placeholder="70"
+                />
+              </div>
+            </div>
+
             <Button 
-              onClick={updatePlayerPositions} 
+              type="submit"
               className="w-full" 
-              disabled={loading || selectedPositions.length === 0}
+              disabled={loading || editSelectedPositions.length === 0}
             >
-              {loading ? 'Updating...' : 'Update Positions'}
+              {loading ? 'Updating...' : 'Update Player'}
             </Button>
-          </div>
+          </form>
         </DialogContent>
       </Dialog>
     </Layout>
