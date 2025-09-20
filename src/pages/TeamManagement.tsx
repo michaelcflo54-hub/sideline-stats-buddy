@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Users, Mail } from 'lucide-react';
+import { Plus, Users, Mail, Settings } from 'lucide-react';
 
 const TeamManagement = () => {
   const { profile } = useAuth();
@@ -19,6 +20,8 @@ const TeamManagement = () => {
   const [loading, setLoading] = useState(false);
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [showInviteUser, setShowInviteUser] = useState(false);
+  const [showChangeRole, setShowChangeRole] = useState(false);
+  const [newRole, setNewRole] = useState<'head_coach' | 'assistant_coach' | 'parent' | ''>('');
 
   const canManageTeam = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
 
@@ -125,6 +128,36 @@ const TeamManagement = () => {
     }
   };
 
+  const changeRole = async () => {
+    if (!newRole || !profile?.user_id) return;
+    setLoading(true);
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('user_id', profile.user_id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Role updated!",
+        description: `Your role has been changed to ${formatRole(newRole)}.`
+      });
+
+      setShowChangeRole(false);
+      window.location.reload(); // Refresh to update the layout
+    } catch (error: any) {
+      toast({
+        title: "Error updating role",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatRole = (role: string) => {
     return role.split('_').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
@@ -207,39 +240,81 @@ const TeamManagement = () => {
               {team ? `Manage ${team.name} - ${team.season_year} Season` : 'Loading team...'}
             </p>
           </div>
-          {canManageTeam && (
-            <Dialog open={showInviteUser} onOpenChange={setShowInviteUser}>
+          <div className="flex gap-2">
+            <Dialog open={showChangeRole} onOpenChange={setShowChangeRole}>
               <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Invite Coach
+                <Button variant="outline" size="sm">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Change Role
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Invite Coach</DialogTitle>
+                  <DialogTitle>Change Your Role</DialogTitle>
                   <DialogDescription>
-                    Invite an assistant coach or parent to join your team.
+                    Update your role on the team. You can switch between coaching roles.
                   </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={inviteUser} className="space-y-4">
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="coach@example.com"
-                      required
-                    />
+                    <Label>Current Role</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {formatRole(profile?.role || '')}
+                    </p>
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? 'Sending...' : 'Send Instructions'}
+                  <div className="space-y-2">
+                    <Label>New Role</Label>
+                    <Select value={newRole} onValueChange={(value) => setNewRole(value as 'head_coach' | 'assistant_coach' | 'parent' | '')}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select new role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="head_coach">Head Coach</SelectItem>
+                        <SelectItem value="assistant_coach">Assistant Coach</SelectItem>
+                        <SelectItem value="parent">Parent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={changeRole} className="w-full" disabled={loading || !newRole}>
+                    {loading ? 'Updating...' : 'Update Role'}
                   </Button>
-                </form>
+                </div>
               </DialogContent>
             </Dialog>
-          )}
+            {canManageTeam && (
+              <Dialog open={showInviteUser} onOpenChange={setShowInviteUser}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Invite Coach
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Invite Coach</DialogTitle>
+                    <DialogDescription>
+                      Invite an assistant coach or parent to join your team.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={inviteUser} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email Address</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="coach@example.com"
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? 'Sending...' : 'Send Instructions'}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </div>
 
         <Card>
