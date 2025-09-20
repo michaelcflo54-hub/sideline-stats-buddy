@@ -1,8 +1,9 @@
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
-import { Plus, Users, Calendar, BarChart3, Settings } from 'lucide-react';
+import { Plus, Users, Calendar, BarChart3, Settings, Building2, TrendingUp, Archive } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Index = () => {
@@ -14,22 +15,24 @@ const Index = () => {
     <Layout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-3xl font-bold">Dashboard</h2>
-            <p className="text-muted-foreground">Manage your team's football analytics</p>
+          <div className="flex items-center gap-4">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={profile?.avatar_url} />
+              <AvatarFallback>
+                {profile?.first_name?.[0]}{profile?.last_name?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="text-3xl font-bold">Dashboard</h2>
+              <p className="text-muted-foreground">Manage your team's football analytics</p>
+            </div>
           </div>
-          {canManageData && (
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Quick Entry
-            </Button>
-          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Players</CardTitle>
+              <CardTitle className="text-sm font-medium">Players You Manage</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -40,34 +43,34 @@ const Index = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Games</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Teams You Manage</CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">Games this season</p>
+              <p className="text-xs text-muted-foreground">Teams under your management</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Plays Recorded</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Previous Years Seasons</CardTitle>
+              <Archive className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">Total plays analyzed</p>
+              <p className="text-xs text-muted-foreground">Historical seasons tracked</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Analytics</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">--</div>
-              <p className="text-xs text-muted-foreground">Overall play success</p>
+              <p className="text-xs text-muted-foreground">Performance insights available</p>
             </CardContent>
           </Card>
         </div>
