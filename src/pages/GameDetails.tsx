@@ -265,14 +265,14 @@ const GameDetails = () => {
                 Record Play
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Record Play</DialogTitle>
                 <DialogDescription>
                   Add play-by-play details for this down.
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={addPlay} className="space-y-4">
+              <form onSubmit={addPlay} className="space-y-4 pb-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="quarter">Quarter</Label>
