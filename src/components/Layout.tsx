@@ -70,17 +70,22 @@ const Layout = ({ children }: LayoutProps) => {
 
       <main className="container mx-auto px-4 py-8">
         {!profile?.team_id ? (
-          <Card className="max-w-md mx-auto">
-            <CardHeader>
-              <CardTitle>Welcome!</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">
-                You need to be assigned to a team to access the analytics features. 
-                Please contact your head coach to get added to a team.
-              </p>
-            </CardContent>
-          </Card>
+          // If user is a coach, they can create a team, otherwise show contact message
+          profile?.role === 'head_coach' || profile?.role === 'assistant_coach' ? (
+            children // Let coaches access the app so they can create teams
+          ) : (
+            <Card className="max-w-md mx-auto">
+              <CardHeader>
+                <CardTitle>Welcome!</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  You need to be assigned to a team to access the analytics features. 
+                  Please contact your head coach to get added to a team.
+                </p>
+              </CardContent>
+            </Card>
+          )
         ) : (
           children
         )}
