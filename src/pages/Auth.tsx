@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 const Auth = () => {
   const { user, signIn, signUp } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [signupRole, setSignupRole] = useState<string | undefined>(undefined);
 
   // Redirect if already authenticated
   if (user) {
@@ -38,12 +39,16 @@ const Auth = () => {
     const password = formData.get('signup-password') as string;
     const firstName = formData.get('first-name') as string;
     const lastName = formData.get('last-name') as string;
-    const role = formData.get('role') as string;
+    const role = signupRole as string | undefined;
+    if (!role) {
+      setLoading(false);
+      return;
+    }
     
     await signUp(email, password, {
       first_name: firstName,
       last_name: lastName,
-      role: role
+      role
     });
     setLoading(false);
   };
@@ -114,7 +119,7 @@ const Auth = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="role">Role</Label>
-                  <Select name="role" required>
+                  <Select value={signupRole} onValueChange={setSignupRole} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select your role" />
                     </SelectTrigger>

@@ -3,6 +3,8 @@ import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,6 +12,7 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const { user, profile, signOut, loading } = useAuth();
+  const { toast } = useToast();
 
   if (loading) {
     return (
@@ -42,6 +45,19 @@ const Layout = ({ children }: LayoutProps) => {
     ).join(' ');
   };
 
+  const handleBecomeCoach = async () => {
+    if (!profile?.user_id) return;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: 'head_coach' })
+      .eq('user_id', profile.user_id);
+    if (error) {
+      toast({ title: 'Role update failed', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Role updated', description: 'You are now a Head Coach. You can create a team.' });
+      window.location.reload();
+    }
+  };
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
@@ -82,6 +98,11 @@ const Layout = ({ children }: LayoutProps) => {
                   You need to be assigned to a team to access the analytics features. 
                   Please contact your head coach to get added to a team.
                 </p>
+                {profile && (
+                  <Button onClick={handleBecomeCoach}>
+                    I'm a Coach — Set Role
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )
