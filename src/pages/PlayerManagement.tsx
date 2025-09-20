@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
@@ -10,11 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Users, Edit } from 'lucide-react';
+import { Plus, Users, Edit, ArrowLeft } from 'lucide-react';
 
 const PlayerManagement = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
@@ -93,9 +95,19 @@ const PlayerManagement = () => {
     <Layout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-3xl font-bold">Player Management</h2>
-            <p className="text-muted-foreground">Manage your team roster</p>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/')}
+              className="rounded-full"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h2 className="text-3xl font-bold">Player Management</h2>
+              <p className="text-muted-foreground">Manage your team roster</p>
+            </div>
           </div>
           {canManage && (
             <Dialog open={showAddPlayer} onOpenChange={setShowAddPlayer}>
