@@ -130,7 +130,7 @@ const Index = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {profile?.role === 'head_coach' && (
+                {(profile?.role === 'head_coach' || profile?.role === 'assistant_coach') && (
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 bg-primary rounded-full"></div>
                     <span className="text-sm">Create your team and invite coaches</span>

@@ -20,7 +20,7 @@ const TeamManagement = () => {
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [showInviteUser, setShowInviteUser] = useState(false);
 
-  const isHeadCoach = profile?.role === 'head_coach';
+  const canManageTeam = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
 
   useEffect(() => {
     if (profile?.team_id) {
@@ -140,7 +140,7 @@ const TeamManagement = () => {
     }
   };
 
-  if (!profile?.team_id && isHeadCoach) {
+  if (!profile?.team_id && canManageTeam) {
     return (
       <Layout>
         <div className="max-w-md mx-auto">
@@ -150,7 +150,7 @@ const TeamManagement = () => {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground mb-4">
-                As a head coach, you need to create a team first.
+                As a coach, you need to create a team first.
               </p>
               <Dialog open={showCreateTeam} onOpenChange={setShowCreateTeam}>
                 <DialogTrigger asChild>
@@ -207,7 +207,7 @@ const TeamManagement = () => {
               {team ? `Manage ${team.name} - ${team.season_year} Season` : 'Loading team...'}
             </p>
           </div>
-          {isHeadCoach && (
+          {canManageTeam && (
             <Dialog open={showInviteUser} onOpenChange={setShowInviteUser}>
               <DialogTrigger asChild>
                 <Button>
@@ -276,7 +276,7 @@ const TeamManagement = () => {
           </CardContent>
         </Card>
 
-        {isHeadCoach && (
+        {canManageTeam && (
           <Card>
             <CardHeader>
               <CardTitle>Team Instructions</CardTitle>
@@ -284,7 +284,7 @@ const TeamManagement = () => {
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium mb-2">For Assistant Coaches:</h4>
+                  <h4 className="font-medium mb-2">For Other Coaches:</h4>
                   <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
                     <li>Have them sign up for an account at this app</li>
                     <li>Share your team code: <code className="bg-muted px-1 rounded">{team?.id?.slice(0, 8)}</code></li>
@@ -294,6 +294,7 @@ const TeamManagement = () => {
                 <div>
                   <h4 className="font-medium mb-2">What coaches can do:</h4>
                   <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                    <li>Create and manage teams</li>
                     <li>Add and manage players</li>
                     <li>Record game data and play-by-play information</li>
                     <li>View analytics and player statistics</li>
