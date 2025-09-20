@@ -22,6 +22,8 @@ const PlayerManagement = () => {
   const [loading, setLoading] = useState(false);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
+  const [editingPlayer, setEditingPlayer] = useState<any>(null);
+  const [showEditPlayer, setShowEditPlayer] = useState(false);
 
   const canManage = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
 
@@ -110,6 +112,51 @@ const PlayerManagement = () => {
         ? [...prev, position]
         : prev.filter(p => p !== position)
     );
+  };
+
+  const handleEditPlayer = (player: any) => {
+    setEditingPlayer(player);
+    setSelectedPositions(player.positions || []);
+    setShowEditPlayer(true);
+  };
+
+  const updatePlayerPositions = async () => {
+    if (!editingPlayer || selectedPositions.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one position.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('players')
+        .update({ positions: selectedPositions })
+        .eq('id', editingPlayer.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Positions updated!",
+        description: `${editingPlayer.first_name} ${editingPlayer.last_name}'s positions have been updated.`
+      });
+
+      setShowEditPlayer(false);
+      setEditingPlayer(null);
+      setSelectedPositions([]);
+      fetchPlayers();
+    } catch (error: any) {
+      toast({
+        title: "Error updating positions",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -264,28 +311,41 @@ const PlayerManagement = () => {
                    </div>
                  </div>
                </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-2 text-sm">
-                  {player.grade_level && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Grade:</span>
-                      <span>{player.grade_level}</span>
-                    </div>
-                  )}
-                  {player.weight && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Weight:</span>
-                      <span>{player.weight} lbs</span>
-                    </div>
-                  )}
-                  {player.height && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Height:</span>
-                      <span>{Math.floor(player.height / 12)}'{player.height % 12}"</span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
+               <CardContent className="pt-0">
+                 <div className="space-y-2 text-sm">
+                   {player.grade_level && (
+                     <div className="flex justify-between">
+                       <span className="text-muted-foreground">Grade:</span>
+                       <span>{player.grade_level}</span>
+                     </div>
+                   )}
+                   {player.weight && (
+                     <div className="flex justify-between">
+                       <span className="text-muted-foreground">Weight:</span>
+                       <span>{player.weight} lbs</span>
+                     </div>
+                   )}
+                   {player.height && (
+                     <div className="flex justify-between">
+                       <span className="text-muted-foreground">Height:</span>
+                       <span>{Math.floor(player.height / 12)}'{player.height % 12}"</span>
+                     </div>
+                   )}
+                 </div>
+                 {canManage && (
+                   <div className="mt-3 pt-3 border-t">
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       className="w-full"
+                       onClick={() => handleEditPlayer(player)}
+                     >
+                       <Edit className="mr-2 h-3 w-3" />
+                       Edit Positions
+                     </Button>
+                   </div>
+                 )}
+               </CardContent>
             </Card>
           ))}
         </div>
@@ -310,6 +370,63 @@ const PlayerManagement = () => {
           </Card>
         )}
       </div>
+
+      {/* Edit Player Positions Dialog */}
+      <Dialog open={showEditPlayer} onOpenChange={(open) => {
+        setShowEditPlayer(open);
+        if (!open) {
+          setEditingPlayer(null);
+          setSelectedPositions([]);
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Player Positions</DialogTitle>
+            <DialogDescription>
+              Update positions for {editingPlayer?.first_name} {editingPlayer?.last_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Current Jersey Number</Label>
+              <p className="text-sm text-muted-foreground">
+                #{editingPlayer?.jersey_number}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Positions</Label>
+              <div className="grid grid-cols-3 gap-2 p-3 border rounded-lg max-h-32 overflow-y-auto">
+                {positions.map(pos => (
+                  <div key={pos} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`edit-${pos}`}
+                      checked={selectedPositions.includes(pos)}
+                      onCheckedChange={(checked) => 
+                        handlePositionChange(pos, checked as boolean)
+                      }
+                    />
+                    <Label htmlFor={`edit-${pos}`} className="text-sm cursor-pointer">
+                      {pos}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              {selectedPositions.length === 0 && (
+                <p className="text-xs text-red-500">
+                  Select at least one position
+                </p>
+              )}
+            </div>
+            <Button 
+              onClick={updatePlayerPositions} 
+              className="w-full" 
+              disabled={loading || selectedPositions.length === 0}
+            >
+              {loading ? 'Updating...' : 'Update Positions'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
