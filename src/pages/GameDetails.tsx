@@ -58,6 +58,7 @@ const GameDetails = () => {
   const [playbookPlays, setPlaybookPlays] = useState<PlaybookPlay[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddPlay, setShowAddPlay] = useState(false);
+  const [selectedOffenseDefense, setSelectedOffenseDefense] = useState<'offense' | 'defense' | ''>('');
 
   const canManage = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
 
@@ -243,7 +244,10 @@ const GameDetails = () => {
               </p>
             </div>
           </div>
-          <Dialog open={showAddPlay} onOpenChange={setShowAddPlay}>
+          <Dialog open={showAddPlay} onOpenChange={(open) => {
+            setShowAddPlay(open);
+            if (!open) setSelectedOffenseDefense('');
+          }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
@@ -316,6 +320,23 @@ const GameDetails = () => {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="offense-defense">Offense/Defense</Label>
+                  <Select 
+                    name="offense-defense" 
+                    required
+                    onValueChange={(value) => setSelectedOffenseDefense(value as 'offense' | 'defense')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select offense or defense" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="offense">Offense</SelectItem>
+                      <SelectItem value="defense">Defense</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="playbook-play">Select from Playbook (Optional)</Label>
                   <Select name="playbook-play">
                     <SelectTrigger>
@@ -339,11 +360,26 @@ const GameDetails = () => {
                         <SelectValue placeholder="Select play type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="run">Run</SelectItem>
-                        <SelectItem value="pass">Pass</SelectItem>
-                        <SelectItem value="punt">Punt</SelectItem>
-                        <SelectItem value="field_goal">Field Goal</SelectItem>
-                        <SelectItem value="extra_point">Extra Point</SelectItem>
+                        {selectedOffenseDefense === 'defense' ? (
+                          <>
+                            <SelectItem value="inside">Inside</SelectItem>
+                            <SelectItem value="outside_run">Outside Run</SelectItem>
+                            <SelectItem value="wide_receiver_screen">Wide Receiver Screen</SelectItem>
+                            <SelectItem value="draw">Draw</SelectItem>
+                            <SelectItem value="deep_pass">Deep Pass</SelectItem>
+                            <SelectItem value="flat_pass">Flat Pass</SelectItem>
+                            <SelectItem value="jet">Jet</SelectItem>
+                            <SelectItem value="tight_end_pass">Tight End Pass</SelectItem>
+                          </>
+                        ) : (
+                          <>
+                            <SelectItem value="run">Run</SelectItem>
+                            <SelectItem value="pass">Pass</SelectItem>
+                            <SelectItem value="punt">Punt</SelectItem>
+                            <SelectItem value="field_goal">Field Goal</SelectItem>
+                            <SelectItem value="extra_point">Extra Point</SelectItem>
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
