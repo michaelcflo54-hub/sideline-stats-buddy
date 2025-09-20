@@ -12,6 +12,7 @@ const Index = () => {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [team, setTeam] = useState<any>(null);
+  const [players, setPlayers] = useState<any[]>([]);
   
   const canManageData = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
 
@@ -30,6 +31,15 @@ const Index = () => {
         .single();
       
       setTeam(teamData);
+
+      // Fetch players
+      const { data: playersData } = await supabase
+        .from('players')
+        .select('*')
+        .eq('team_id', profile.team_id)
+        .eq('active', true);
+      
+      setPlayers(playersData || []);
     } catch (error) {
       console.error('Error fetching team data:', error);
     }
@@ -54,13 +64,16 @@ const Index = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
+          <Card 
+            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => navigate('/players')}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Players You Manage</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{players.length}</div>
               <p className="text-xs text-muted-foreground">Active players on roster</p>
             </CardContent>
           </Card>
