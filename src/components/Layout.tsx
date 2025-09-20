@@ -85,6 +85,16 @@ const Layout = ({ children }: LayoutProps) => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {/* Debug info - remove later */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mb-4 p-4 bg-gray-100 rounded text-xs">
+            <div>User: {user?.email}</div>
+            <div>Profile: {profile ? `${profile.first_name} ${profile.last_name}` : 'No profile'}</div>
+            <div>Role: {profile?.role || 'No role'}</div>
+            <div>Team ID: {profile?.team_id || 'No team'}</div>
+          </div>
+        )}
+        
         {!profile?.team_id ? (
           (profile?.role === 'head_coach' || profile?.role === 'assistant_coach') ? (
             children
