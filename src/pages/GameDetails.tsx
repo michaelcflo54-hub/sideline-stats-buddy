@@ -14,6 +14,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, ArrowLeft, Play, Target, Flag, TrendingUp, TrendingDown } from 'lucide-react';
 
+interface PlaybookPlay {
+  id: string;
+  name: string;
+  description: string;
+  category: 'offense' | 'defense' | 'special_teams';
+  direction?: 'left' | 'right' | 'center';
+  formation?: string;
+}
+
 interface GameData {
   id: string;
   opponent_name: string;
@@ -46,6 +55,7 @@ const GameDetails = () => {
   const [game, setGame] = useState<GameData | null>(null);
   const [plays, setPlays] = useState<PlayData[]>([]);
   const [players, setPlayers] = useState<any[]>([]);
+  const [playbookPlays, setPlaybookPlays] = useState<PlaybookPlay[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddPlay, setShowAddPlay] = useState(false);
 
@@ -55,6 +65,7 @@ const GameDetails = () => {
     if (gameId && profile?.team_id) {
       fetchGameData();
       fetchPlayers();
+      fetchPlaybookPlays();
     }
   }, [gameId, profile]);
 
@@ -103,6 +114,18 @@ const GameDetails = () => {
       setPlayers(playersData || []);
     } catch (error) {
       console.error('Error fetching players:', error);
+    }
+  };
+
+  const fetchPlaybookPlays = async () => {
+    try {
+      // Fetch plays from localStorage (same as PlaybookManagement)
+      const savedPlays = localStorage.getItem(`playbook_${profile.team_id}`);
+      if (savedPlays) {
+        setPlaybookPlays(JSON.parse(savedPlays));
+      }
+    } catch (error) {
+      console.error('Error fetching playbook plays:', error);
     }
   };
 
@@ -292,6 +315,22 @@ const GameDetails = () => {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="playbook-play">Select from Playbook (Optional)</Label>
+                  <Select name="playbook-play">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a play from playbook" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {playbookPlays.map((play) => (
+                        <SelectItem key={play.id} value={play.id}>
+                          {play.name} ({play.category.replace('_', ' ')})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="play-type">Play Type</Label>
@@ -305,6 +344,37 @@ const GameDetails = () => {
                         <SelectItem value="punt">Punt</SelectItem>
                         <SelectItem value="field_goal">Field Goal</SelectItem>
                         <SelectItem value="extra_point">Extra Point</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="direction">Direction</Label>
+                    <Select name="direction">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select direction" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="left">Left</SelectItem>
+                        <SelectItem value="right">Right</SelectItem>
+                        <SelectItem value="center">Center</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="player">Player Involved</Label>
+                    <Select name="player">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select player" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {players.map((player) => (
+                          <SelectItem key={player.id} value={player.id}>
+                            #{player.jersey_number} {player.first_name} {player.last_name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
