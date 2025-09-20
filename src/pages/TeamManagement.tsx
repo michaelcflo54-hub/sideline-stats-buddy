@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
@@ -10,11 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Users, Mail, Settings } from 'lucide-react';
+import { Plus, Users, Mail, Settings, BookOpen } from 'lucide-react';
 
 const TeamManagement = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [team, setTeam] = useState<any>(null);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [players, setPlayers] = useState<any[]>([]);
@@ -252,6 +254,16 @@ const TeamManagement = () => {
             </p>
           </div>
           <div className="flex gap-2">
+            {canManageTeam && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate('/playbook')}
+              >
+                <BookOpen className="mr-2 h-4 w-4" />
+                Manage Playbook
+              </Button>
+            )}
             <Dialog open={showChangeRole} onOpenChange={setShowChangeRole}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
