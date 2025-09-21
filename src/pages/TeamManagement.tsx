@@ -32,6 +32,7 @@ const TeamManagement = () => {
   const [showScheduleGame, setShowScheduleGame] = useState(false);
   const [showEditGame, setShowEditGame] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [editingGame, setEditingGame] = useState<any>(null);
   const [gameDate, setGameDate] = useState<Date>();
   const [editGameDate, setEditGameDate] = useState<Date>();
@@ -355,6 +356,60 @@ const TeamManagement = () => {
     }
   };
 
+  const addPlayer = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    
+    // Parse positions from checkboxes
+    const positions = [];
+    const positionOptions = ['QB', 'RB', 'WR', 'TE', 'OL', 'DL', 'LB', 'CB', 'S', 'K'];
+    positionOptions.forEach(pos => {
+      if (formData.get(`position-${pos}`)) {
+        positions.push(pos);
+      }
+    });
+
+    const playerData = {
+      team_id: profile.team_id,
+      first_name: formData.get('first-name') as string,
+      last_name: formData.get('last-name') as string,
+      nickname: formData.get('nickname') as string || null,
+      jersey_number: parseInt(formData.get('jersey-number') as string),
+      positions: positions.length > 0 ? positions : null,
+      grade_level: formData.get('grade-level') ? parseInt(formData.get('grade-level') as string) : null,
+      height: formData.get('height') ? parseInt(formData.get('height') as string) : null,
+      weight: formData.get('weight') ? parseInt(formData.get('weight') as string) : null,
+      active: true
+    };
+
+    try {
+      const { error } = await supabase
+        .from('players')
+        .insert(playerData);
+
+      if (error) throw error;
+
+      toast({
+        title: "Player added!",
+        description: `${playerData.first_name} ${playerData.last_name} has been added to the team.`
+      });
+
+      setShowAddPlayer(false);
+      fetchTeamData();
+      (e.target as HTMLFormElement).reset();
+    } catch (error: any) {
+      toast({
+        title: "Error adding player",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatRole = (role: string) => {
     return role.split('_').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
@@ -617,10 +672,18 @@ const TeamManagement = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Players ({players.length})
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Players ({players.length})
+              </CardTitle>
+              {canManageTeam && (
+                <Button onClick={() => setShowAddPlayer(true)} size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Player
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -652,6 +715,14 @@ const TeamManagement = () => {
               {players.length === 0 && (
                 <div className="col-span-full text-center py-8 text-muted-foreground">
                   No players yet. Add players to get started!
+                  {canManageTeam && (
+                    <div className="mt-2">
+                      <Button onClick={() => setShowAddPlayer(true)} variant="outline">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add First Player
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -848,6 +919,128 @@ const TeamManagement = () => {
 
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Updating...' : 'Update Game'}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Player Dialog */}
+        <Dialog open={showAddPlayer} onOpenChange={setShowAddPlayer}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Add New Player</DialogTitle>
+              <DialogDescription>
+                Add a new player to your team roster.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={addPlayer} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Basic Info */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold">Basic Information</h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="first-name">First Name</Label>
+                    <Input
+                      id="first-name"
+                      name="first-name"
+                      placeholder="e.g., John"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="last-name">Last Name</Label>
+                    <Input
+                      id="last-name"
+                      name="last-name"
+                      placeholder="e.g., Smith"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="nickname">Nickname (Optional)</Label>
+                    <Input
+                      id="nickname"
+                      name="nickname"
+                      placeholder="e.g., Johnny"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="jersey-number">Jersey Number</Label>
+                    <Input
+                      id="jersey-number"
+                      name="jersey-number"
+                      type="number"
+                      min="0"
+                      max="99"
+                      placeholder="e.g., 12"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="grade-level">Grade Level (Optional)</Label>
+                    <Input
+                      id="grade-level"
+                      name="grade-level"
+                      type="number"
+                      min="1"
+                      max="12"
+                      placeholder="e.g., 8"
+                    />
+                  </div>
+                </div>
+
+                {/* Physical Stats & Positions */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold">Physical Stats & Positions</h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="height">Height in Inches (Optional)</Label>
+                    <Input
+                      id="height"
+                      name="height"
+                      type="number"
+                      min="36"
+                      max="84"
+                      placeholder="e.g., 60 (for 5'0'')"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="weight">Weight in lbs (Optional)</Label>
+                    <Input
+                      id="weight"
+                      name="weight"
+                      type="number"
+                      min="50"
+                      max="300"
+                      placeholder="e.g., 140"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Positions (Select all that apply)</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {['QB', 'RB', 'WR', 'TE', 'OL', 'DL', 'LB', 'CB', 'S', 'K'].map(position => (
+                        <label key={position} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            name={`position-${position}`}
+                            value={position}
+                            className="rounded border-gray-300"
+                          />
+                          <span className="text-sm font-medium">{position}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Adding...' : 'Add Player'}
               </Button>
             </form>
           </DialogContent>
