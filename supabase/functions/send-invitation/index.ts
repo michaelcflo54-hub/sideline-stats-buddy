@@ -43,21 +43,24 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Unauthorized');
     }
 
-    // Create invitation record in database
-    const { data: invitation, error: inviteError } = await supabase
-      .from('invitations')
-      .insert({
-        team_id: teamId,
-        email: email.toLowerCase(),
-        invited_by: user.id
-      })
-      .select()
-      .single();
+    // Create secure invitation using the new token-based system
+    const { data: invitationData, error: inviteError } = await supabase
+      .rpc('create_team_invitation', {
+        p_email: email.toLowerCase(),
+        p_team_id: teamId,
+        p_invited_by: user.id
+      });
 
     if (inviteError) {
       console.error('Error creating invitation:', inviteError);
       throw new Error('Failed to create invitation');
     }
+
+    if (!invitationData || invitationData.length === 0) {
+      throw new Error('No invitation data returned');
+    }
+
+    const { invitation_token, expires_at } = invitationData[0];
 
     const emailResponse = await resend.emails.send({
       from: "Down & Distance <noreply@downndistance.com>",
@@ -76,25 +79,31 @@ const handler = async (req: Request): Promise<Response> => {
           </p>
           
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #333; margin-top: 0;">Getting Started:</h3>
-            <ol style="color: #555; line-height: 1.8;">
-              <li>Sign up at the app: <a href="${appUrl}" style="color: #2563eb;">${appUrl}</a></li>
-              <li>Accept your team invitation when you log in</li>
-              <li>Alternative: Use team code: <strong style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${teamCode}</strong></li>
-            </ol>
+            <h3 style="color: #333; margin-top: 0;">Two ways to join:</h3>
+            
+            <div style="margin: 15px 0;">
+              <strong>Option 1: Use the secure invitation link</strong><br>
+              <div style="text-align: center; margin: 15px 0;">
+                <a href="${appUrl}/invitation/${invitation_token}" 
+                   style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+                  Accept Invitation
+                </a>
+              </div>
+            </div>
+            
+            <div style="margin: 15px 0;">
+              <strong>Option 2: Use the team code</strong><br>
+              Team code: <strong style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${teamCode}</strong><br>
+              <small style="color: #666;">Visit <a href="${appUrl}" style="color: #2563eb;">${appUrl}</a> and enter this code to join the team.</small>
+            </div>
           </div>
           
           <p style="font-size: 16px; line-height: 1.6; color: #555;">
             The Down & Distance platform helps youth football teams track game analytics, manage rosters, and improve performance through data-driven insights.
           </p>
           
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${appUrl}" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
-              Join ${teamName}
-            </a>
-          </div>
-          
           <p style="font-size: 14px; color: #888; text-align: center; margin-top: 30px;">
+            This invitation expires on ${new Date(expires_at).toLocaleDateString()}.<br>
             If you have any questions, please contact ${inviterName} directly.
           </p>
         </div>

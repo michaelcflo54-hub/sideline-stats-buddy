@@ -384,62 +384,7 @@ export type Database = {
       }
     }
     Views: {
-      safe_invitation_summary: {
-        Row: {
-          created_at: string | null
-          email_status: string | null
-          expires_at: string | null
-          invited_by: string | null
-          status: string | null
-          team_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          email_status?: never
-          expires_at?: string | null
-          invited_by?: string | null
-          status?: string | null
-          team_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          email_status?: never
-          expires_at?: string | null
-          invited_by?: string | null
-          status?: string | null
-          team_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_invitations_invited_by"
-            columns: ["invited_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "fk_invitations_team_id"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invitations_invited_by_fkey"
-            columns: ["invited_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "invitations_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       accept_invitation: {
@@ -459,6 +404,16 @@ export type Database = {
         Returns: {
           expires_at: string
           invitation_token: string
+        }[]
+      }
+      get_my_invitation_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          expires_at: string
+          id: string
+          status: string
+          team_name: string
         }[]
       }
       get_my_team_details: {
