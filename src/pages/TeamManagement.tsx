@@ -638,6 +638,37 @@ const TeamManagement = () => {
           </div>
         </div>
 
+        {team?.team_code && (
+          <Card className="bg-primary/5 border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Team Code
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center space-y-4">
+                <div className="text-3xl font-mono font-bold tracking-wider bg-background p-4 rounded-lg border">
+                  {team.team_code}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Share this code with assistant coaches and parents so they can join your team.
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(team.team_code);
+                    toast({ title: "Copied!", description: "Team code copied to clipboard" });
+                  }}
+                >
+                  Copy Team Code
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
