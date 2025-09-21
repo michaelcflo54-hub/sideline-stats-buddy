@@ -388,6 +388,10 @@ export type Database = {
         Args: { invitation_id: string }
         Returns: boolean
       }
+      can_join_team_by_code: {
+        Args: { code: string }
+        Returns: boolean
+      }
       get_my_team_member_profiles: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -398,6 +402,14 @@ export type Database = {
           team_id: string
           updated_at: string
           user_id: string
+        }[]
+      }
+      get_team_invitation_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          accepted_count: number
+          expired_count: number
+          pending_count: number
         }[]
       }
       get_user_role: {

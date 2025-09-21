@@ -28,6 +28,24 @@ const JoinTeam = ({ onSuccess }: JoinTeamProps) => {
 
     setIsLoading(true);
     try {
+      // First check if the team code is valid using the secure function
+      const { data: canJoin, error: checkError } = await supabase
+        .rpc('can_join_team_by_code', { code: teamCode.trim() });
+
+      if (checkError) {
+        throw checkError;
+      }
+
+      if (!canJoin) {
+        toast({
+          title: "Invalid Team Code",
+          description: "The team code you entered was not found or you're already part of a team.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // If team code is valid, proceed to join
       const { data: success, error } = await supabase
         .rpc('join_team_by_code', { code: teamCode.trim() });
 
@@ -47,8 +65,8 @@ const JoinTeam = ({ onSuccess }: JoinTeamProps) => {
         onSuccess();
       } else {
         toast({
-          title: "Invalid Team Code",
-          description: "The team code you entered was not found. Please check and try again.",
+          title: "Unable to Join Team",
+          description: "There was an issue joining the team. Please try again.",
           variant: "destructive",
         });
       }

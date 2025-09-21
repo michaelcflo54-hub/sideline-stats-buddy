@@ -34,54 +34,39 @@ const PendingInvitations = ({ onAccepted }: PendingInvitationsProps) => {
 
   const fetchInvitations = async () => {
     try {
-      // First get the invitations
+      // With the new secure RLS policies, we query invitations with explicit joins
+      // The policy ensures only invitations for the user's email are returned
       const { data: invitationsData, error: invitationsError } = await supabase
         .from('invitations')
-        .select('*')
+        .select(`
+          *,
+          teams!team_id(id, name, team_code),
+          profiles!invited_by(user_id, first_name, last_name)
+        `)
         .eq('status', 'pending')
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false });
 
       if (invitationsError) {
         console.error('Error fetching invitations:', invitationsError);
-        return;
-      }
-
-      if (!invitationsData || invitationsData.length === 0) {
         setInvitations([]);
         return;
       }
 
-      // Get team names
-      const teamIds = invitationsData.map(inv => inv.team_id);
-      const { data: teamsData } = await supabase
-        .from('teams')
-        .select('id, name, team_code')
-        .in('id', teamIds);
-
-      // Get inviter names
-      const inviterIds = invitationsData.map(inv => inv.invited_by);
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('user_id, first_name, last_name')
-        .in('user_id', inviterIds);
-
-      // Combine the data
-      const enrichedInvitations = invitationsData.map(invitation => {
-        const team = teamsData?.find(t => t.id === invitation.team_id);
-        const inviter = profilesData?.find(p => p.user_id === invitation.invited_by);
-        
-        return {
-          ...invitation,
-          team_name: team?.name || 'Unknown Team',
-          team_code: team?.team_code || '',
-          inviter_name: inviter ? `${inviter.first_name} ${inviter.last_name}` : 'Unknown'
-        };
-      });
+      // Transform the data with the joined information
+      const enrichedInvitations = (invitationsData || []).map(invitation => ({
+        ...invitation,
+        team_name: invitation.teams?.name || 'Unknown Team',
+        team_code: invitation.teams?.team_code || '',
+        inviter_name: invitation.profiles ? 
+          `${invitation.profiles.first_name} ${invitation.profiles.last_name}`.trim() : 
+          'Unknown'
+      }));
 
       setInvitations(enrichedInvitations);
     } catch (error) {
       console.error('Error fetching invitations:', error);
+      setInvitations([]);
     } finally {
       setLoading(false);
     }
