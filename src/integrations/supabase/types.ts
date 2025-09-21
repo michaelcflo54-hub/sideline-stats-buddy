@@ -296,6 +296,7 @@ export type Database = {
           id: string
           name: string
           season_year: number
+          team_code: string
           updated_at: string
         }
         Insert: {
@@ -303,6 +304,7 @@ export type Database = {
           id?: string
           name: string
           season_year: number
+          team_code: string
           updated_at?: string
         }
         Update: {
@@ -310,6 +312,7 @@ export type Database = {
           id?: string
           name?: string
           season_year?: number
+          team_code?: string
           updated_at?: string
         }
         Relationships: []
@@ -338,6 +341,10 @@ export type Database = {
       get_user_team: {
         Args: { _user_id: string }
         Returns: string
+      }
+      join_team_by_code: {
+        Args: { code: string }
+        Returns: boolean
       }
     }
     Enums: {

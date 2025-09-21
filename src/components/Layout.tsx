@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import JoinTeam from './JoinTeam';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -97,7 +98,12 @@ const Layout = ({ children }: LayoutProps) => {
         
         {!profile?.team_id ? (
           (profile?.role === 'head_coach' || profile?.role === 'assistant_coach') ? (
-            children
+            <div className="space-y-6">
+              {children}
+              <div className="max-w-md mx-auto">
+                <JoinTeam onSuccess={() => window.location.reload()} />
+              </div>
+            </div>
           ) : (
             <Card className="max-w-md mx-auto">
               <CardHeader>

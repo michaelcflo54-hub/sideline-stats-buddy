@@ -95,12 +95,16 @@ const TeamManagement = () => {
     const seasonYear = parseInt(formData.get('season-year') as string);
 
     try {
+      // Generate a unique 6-character team code
+      const teamCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      
       // Create team
       const { data: teamData, error: teamError } = await supabase
         .from('teams')
         .insert({
           name: teamName,
-          season_year: seasonYear
+          season_year: seasonYear,
+          team_code: teamCode
         })
         .select()
         .single();
@@ -145,7 +149,7 @@ const TeamManagement = () => {
         body: {
           email,
           teamName: team?.name || 'Your Team',
-          teamCode: team?.id?.slice(0, 8) || '',
+          teamCode: team?.team_code || '',
           inviterName: `${profile?.first_name} ${profile?.last_name}`.trim(),
           appUrl: window.location.origin
         }
