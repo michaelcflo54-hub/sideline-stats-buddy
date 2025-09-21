@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Users, Mail, Settings, BookOpen, ArrowLeft, Calendar as CalendarIcon, Edit, Trash2 } from 'lucide-react';
+import { Plus, Users, Mail, Settings, BookOpen, ArrowLeft, Calendar as CalendarIcon, Edit, Trash2, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
 
 const TeamManagement = () => {
@@ -30,6 +31,7 @@ const TeamManagement = () => {
   const [showChangeRole, setShowChangeRole] = useState(false);
   const [showScheduleGame, setShowScheduleGame] = useState(false);
   const [showEditGame, setShowEditGame] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   const [editingGame, setEditingGame] = useState<any>(null);
   const [gameDate, setGameDate] = useState<Date>();
   const [editGameDate, setEditGameDate] = useState<Date>();
@@ -315,6 +317,44 @@ const TeamManagement = () => {
     }
   };
 
+  const sendFeedback = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const feedbackData = {
+      role: formData.get('role') as string,
+      feedback: formData.get('feedback') as string,
+      senderName: `${profile?.first_name} ${profile?.last_name}`.trim(),
+      senderEmail: profile?.email || ''
+    };
+
+    try {
+      const { error } = await supabase.functions.invoke('send-feedback', {
+        body: feedbackData
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Feedback sent!",
+        description: "Your feedback has been sent to the development team."
+      });
+
+      setShowFeedback(false);
+      (e.target as HTMLFormElement).reset();
+    } catch (error: any) {
+      console.error('Error sending feedback:', error);
+      toast({
+        title: "Error sending feedback",
+        description: error.message || 'Failed to send feedback',
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatRole = (role: string) => {
     return role.split('_').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
@@ -418,6 +458,53 @@ const TeamManagement = () => {
                 Manage Playbook
               </Button>
             )}
+            <Dialog open={showFeedback} onOpenChange={setShowFeedback}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Send Feedback
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Send Feedback to Developers</DialogTitle>
+                  <DialogDescription>
+                    Share your needs, requirements, or suggestions with our development team.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={sendFeedback} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="role">Your Role</Label>
+                    <Select name="role" required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="head_coach">Head Coach</SelectItem>
+                        <SelectItem value="assistant_coach">Assistant Coach</SelectItem>
+                        <SelectItem value="parent">Parent</SelectItem>
+                        <SelectItem value="player">Player</SelectItem>
+                        <SelectItem value="administrator">Administrator</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="feedback">Feedback / Requirements</Label>
+                    <Textarea
+                      id="feedback"
+                      name="feedback"
+                      placeholder="Describe your needs, suggestions, or requirements..."
+                      rows={5}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Sending...' : 'Send Feedback'}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
             <Dialog open={showChangeRole} onOpenChange={setShowChangeRole}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
