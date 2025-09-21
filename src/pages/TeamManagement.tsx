@@ -57,11 +57,9 @@ const TeamManagement = () => {
       
       setTeam(teamData);
 
-      // Fetch team members (coaches and parents)
+      // Fetch team members (coaches and parents) - using secure function
       const { data: membersData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('team_id', profile.team_id);
+        .rpc('get_my_team_member_profiles');
       
       setTeamMembers(membersData || []);
 

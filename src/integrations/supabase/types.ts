@@ -319,6 +319,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_my_team_member_profiles: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          first_name: string
+          last_name: string
+          role: Database["public"]["Enums"]["user_role"]
+          team_id: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
