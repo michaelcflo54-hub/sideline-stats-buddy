@@ -14,8 +14,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Users, Mail, Settings, BookOpen, ArrowLeft, Calendar as CalendarIcon, Edit, Trash2, MessageSquare } from 'lucide-react';
+import { Plus, Users, Mail, Settings, BookOpen, ArrowLeft, Calendar as CalendarIcon, Edit, Trash2, MessageSquare, Share2 } from 'lucide-react';
 import { format } from 'date-fns';
+import LinkPreview from '@/components/LinkPreview';
 
 const TeamManagement = () => {
   const { profile } = useAuth();
@@ -640,34 +641,58 @@ const TeamManagement = () => {
         </div>
 
         {team?.team_code && (
-          <Card className="bg-primary/5 border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Team Code
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center space-y-4">
-                <div className="text-3xl font-mono font-bold tracking-wider bg-background p-4 rounded-lg border">
-                  {team.team_code}
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card className="bg-primary/5 border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Team Code
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center space-y-4">
+                  <div className="text-3xl font-mono font-bold tracking-wider bg-background p-4 rounded-lg border">
+                    {team.team_code}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Share this code with assistant coaches and parents so they can join your team.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(team.team_code);
+                      toast({ title: "Copied!", description: "Team code copied to clipboard" });
+                    }}
+                  >
+                    Copy Team Code
+                  </Button>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Share this code with assistant coaches and parents so they can join your team.
-                </p>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(team.team_code);
-                    toast({ title: "Copied!", description: "Team code copied to clipboard" });
-                  }}
-                >
-                  Copy Team Code
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Share2 className="h-5 w-5" />
+                  Link Preview
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center space-y-4">
+                  <div className="flex justify-center">
+                    <LinkPreview 
+                      teamName={team.name} 
+                      teamCode={team.team_code}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    This is how your team will appear when shared as a link.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         <Card>
