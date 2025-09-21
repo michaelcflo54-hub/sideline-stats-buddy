@@ -392,6 +392,15 @@ export type Database = {
         Args: { code: string }
         Returns: boolean
       }
+      get_my_team_details: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          name: string
+          season_year: number
+          team_code: string
+        }[]
+      }
       get_my_team_member_profiles: {
         Args: Record<PropertyKey, never>
         Returns: {
