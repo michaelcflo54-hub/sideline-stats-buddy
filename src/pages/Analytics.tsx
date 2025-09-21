@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
@@ -68,6 +70,7 @@ interface GameAnalytics {
 
 const Analytics = () => {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [games, setGames] = useState<Game[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string>('');
   const [plays, setPlays] = useState<Play[]>([]);
@@ -241,9 +244,20 @@ const Analytics = () => {
     <Layout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Game Analytics</h1>
-            <p className="text-muted-foreground">Comprehensive performance analysis</p>
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">Game Analytics</h1>
+              <p className="text-muted-foreground">Comprehensive performance analysis</p>
+            </div>
           </div>
           <div className="w-80">
             <Select value={selectedGameId} onValueChange={setSelectedGameId}>
