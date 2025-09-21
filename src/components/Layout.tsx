@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import JoinTeam from './JoinTeam';
+import PendingInvitations from './PendingInvitations';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -97,31 +98,36 @@ const Layout = ({ children }: LayoutProps) => {
         </div>
         
         {!profile?.team_id ? (
-          (profile?.role === 'head_coach' || profile?.role === 'assistant_coach') ? (
-            <div className="space-y-6">
-              {children}
-              <div className="max-w-md mx-auto">
-                <JoinTeam onSuccess={() => window.location.reload()} />
-              </div>
-            </div>
-          ) : (
-            <Card className="max-w-md mx-auto">
-              <CardHeader>
-                <CardTitle>Welcome!</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  You need to be assigned to a team to access the analytics features. 
-                  Please contact your head coach to get added to a team.
-                </p>
-                {profile && (
-                  <Button onClick={handleBecomeCoach}>
-                    I'm a Coach — Set Role
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          )
+          <div className="space-y-6">
+            {/* Show pending invitations for all users */}
+            <PendingInvitations onAccepted={() => window.location.reload()} />
+            
+            {(profile?.role === 'head_coach' || profile?.role === 'assistant_coach') ? (
+              <>
+                {children}
+                <div className="max-w-md mx-auto">
+                  <JoinTeam onSuccess={() => window.location.reload()} />
+                </div>
+              </>
+            ) : (
+              <Card className="max-w-md mx-auto">
+                <CardHeader>
+                  <CardTitle>Welcome!</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground mb-4">
+                    You need to be assigned to a team to access the analytics features. 
+                    Check above for any pending team invitations, or contact your head coach to get added to a team.
+                  </p>
+                  {profile && (
+                    <Button onClick={handleBecomeCoach}>
+                      I'm a Coach — Set Role
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
         ) : (
           children
         )}

@@ -1,7 +1,12 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Resend } from "npm:resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +16,7 @@ const corsHeaders = {
 
 interface InvitationRequest {
   email: string;
+  teamId: string;
   teamName: string;
   teamCode: string;
   inviterName: string;
@@ -24,9 +30,34 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, teamName, teamCode, inviterName, appUrl }: InvitationRequest = await req.json();
+    const { email, teamId, teamName, teamCode, inviterName, appUrl }: InvitationRequest = await req.json();
 
     console.log("Sending invitation email to:", email);
+
+    // Get the current user (inviter)
+    const authHeader = req.headers.get('Authorization')!;
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user } } = await supabase.auth.getUser(token);
+    
+    if (!user) {
+      throw new Error('Unauthorized');
+    }
+
+    // Create invitation record in database
+    const { data: invitation, error: inviteError } = await supabase
+      .from('invitations')
+      .insert({
+        team_id: teamId,
+        email: email.toLowerCase(),
+        invited_by: user.id
+      })
+      .select()
+      .single();
+
+    if (inviteError) {
+      console.error('Error creating invitation:', inviteError);
+      throw new Error('Failed to create invitation');
+    }
 
     const emailResponse = await resend.emails.send({
       from: "Down & Distance <noreply@downndistance.com>",
@@ -48,8 +79,8 @@ const handler = async (req: Request): Promise<Response> => {
             <h3 style="color: #333; margin-top: 0;">Getting Started:</h3>
             <ol style="color: #555; line-height: 1.8;">
               <li>Sign up at the app: <a href="${appUrl}" style="color: #2563eb;">${appUrl}</a></li>
-              <li>Use team code: <strong style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${teamCode}</strong></li>
-              <li>Contact ${inviterName} to be added to the team</li>
+              <li>Accept your team invitation when you log in</li>
+              <li>Alternative: Use team code: <strong style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${teamCode}</strong></li>
             </ol>
           </div>
           
