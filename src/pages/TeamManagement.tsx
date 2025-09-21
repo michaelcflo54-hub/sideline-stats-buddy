@@ -16,7 +16,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Users, Mail, Settings, BookOpen, ArrowLeft, Calendar as CalendarIcon, Edit, Trash2, MessageSquare, Share2 } from 'lucide-react';
 import { format } from 'date-fns';
-import LinkPreview from '@/components/LinkPreview';
 
 const TeamManagement = () => {
   const { profile } = useAuth();
@@ -675,20 +674,30 @@ const TeamManagement = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Share2 className="h-5 w-5" />
-                  Link Preview
+                  Share Team
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-center space-y-4">
-                  <div className="flex justify-center">
-                    <LinkPreview 
-                      teamName={team.name} 
-                      teamCode={team.team_code}
-                    />
+                  <div className="p-4 bg-muted rounded-lg">
+                    <p className="text-sm font-mono break-all">
+                      {window.location.origin}/join/{team.team_code}
+                    </p>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    This is how your team will appear when shared as a link.
+                    Share this link for easy team joining.
                   </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      const shareUrl = `${window.location.origin}/join/${team.team_code}`;
+                      navigator.clipboard.writeText(shareUrl);
+                      toast({ title: "Copied!", description: "Share link copied to clipboard" });
+                    }}
+                  >
+                    Copy Share Link
+                  </Button>
                 </div>
               </CardContent>
             </Card>
