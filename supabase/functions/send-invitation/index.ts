@@ -29,7 +29,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Sending invitation email to:", email);
 
     const emailResponse = await resend.emails.send({
-      from: "Down & Distance <onboarding@resend.dev>",
+      from: "Down & Distance <noreply@yourdomain.com>",
       to: [email],
       subject: `You're invited to join ${teamName}!`,
       html: `
