@@ -13,6 +13,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, ArrowLeft, BookOpen, Target, Zap, Shield, Edit } from 'lucide-react';
 
+interface PositionAssignment {
+  position: string;
+  assignment: string;
+}
+
 interface Play {
   id: string;
   name: string;
@@ -20,6 +25,10 @@ interface Play {
   category: 'offense' | 'defense' | 'special_teams';
   direction?: 'left' | 'right' | 'center';
   formation?: string;
+  playNumber?: string; // e.g., "8/9"
+  leftFormation?: string; // e.g., "Flex Left (1 Hole)"
+  rightFormation?: string; // e.g., "Flex Right (2 Hole)"
+  positionAssignments: PositionAssignment[];
   created_at: string;
   team_id: string;
 }
@@ -61,6 +70,17 @@ const PlaybookManagement = () => {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
+    
+    // Parse position assignments from form
+    const assignments: PositionAssignment[] = [];
+    const positions = ['QB', 'F', 'H', 'FB', 'L-TE', 'R-TE', 'OL'];
+    positions.forEach(pos => {
+      const assignment = formData.get(`assignment-${pos}`) as string;
+      if (assignment && assignment.trim()) {
+        assignments.push({ position: pos, assignment: assignment.trim() });
+      }
+    });
+    
     const newPlay: Play = {
       id: crypto.randomUUID(),
       name: formData.get('play-name') as string,
@@ -68,6 +88,10 @@ const PlaybookManagement = () => {
       category: formData.get('category') as 'offense' | 'defense' | 'special_teams',
       direction: formData.get('direction') as 'left' | 'right' | 'center' || undefined,
       formation: formData.get('formation') as string || undefined,
+      playNumber: formData.get('play-number') as string || undefined,
+      leftFormation: formData.get('left-formation') as string || undefined,
+      rightFormation: formData.get('right-formation') as string || undefined,
+      positionAssignments: assignments,
       created_at: new Date().toISOString(),
       team_id: profile.team_id
     };
@@ -108,6 +132,17 @@ const PlaybookManagement = () => {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
+    
+    // Parse position assignments from form
+    const assignments: PositionAssignment[] = [];
+    const positions = ['QB', 'F', 'H', 'FB', 'L-TE', 'R-TE', 'OL'];
+    positions.forEach(pos => {
+      const assignment = formData.get(`assignment-${pos}`) as string;
+      if (assignment && assignment.trim()) {
+        assignments.push({ position: pos, assignment: assignment.trim() });
+      }
+    });
+    
     const updatedPlay: Play = {
       ...editingPlay,
       name: formData.get('play-name') as string,
@@ -115,6 +150,10 @@ const PlaybookManagement = () => {
       category: formData.get('category') as 'offense' | 'defense' | 'special_teams',
       direction: formData.get('direction') as 'left' | 'right' | 'center' || undefined,
       formation: formData.get('formation') as string || undefined,
+      playNumber: formData.get('play-number') as string || undefined,
+      leftFormation: formData.get('left-formation') as string || undefined,
+      rightFormation: formData.get('right-formation') as string || undefined,
+      positionAssignments: assignments,
     };
 
     try {
@@ -216,68 +255,119 @@ const PlaybookManagement = () => {
                 Add Play
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Play</DialogTitle>
                 <DialogDescription>
-                  Create a new play for your team's playbook.
+                  Create a new play for your team's playbook with detailed position assignments.
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={addPlay} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="play-name">Play Name</Label>
-                  <Input
-                    id="play-name"
-                    name="play-name"
-                    placeholder="e.g., Power Run Left"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
-                  <select 
-                    name="category" 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    required
-                  >
-                    <option value="offense">Offense</option>
-                    <option value="defense">Defense</option>
-                    <option value="special_teams">Special Teams</option>
-                  </select>
-                </div>
+              <form onSubmit={addPlay} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Basic Info */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Basic Information</h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="play-name">Play Name</Label>
+                      <Input
+                        id="play-name"
+                        name="play-name"
+                        placeholder="e.g., Power I"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="play-number">Play Number/Holes</Label>
+                      <Input
+                        id="play-number"
+                        name="play-number"
+                        placeholder="e.g., 8/9"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="category">Category</Label>
+                      <select 
+                        name="category" 
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        required
+                      >
+                        <option value="offense">Offense</option>
+                        <option value="defense">Defense</option>
+                        <option value="special_teams">Special Teams</option>
+                      </select>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="direction">Direction</Label>
-                  <select 
-                    name="direction" 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="">Select direction (optional)</option>
-                    <option value="left">Left</option>
-                    <option value="right">Right</option>
-                    <option value="center">Center</option>
-                  </select>
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="direction">Direction</Label>
+                      <select 
+                        name="direction" 
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="">Select direction (optional)</option>
+                        <option value="left">Left</option>
+                        <option value="right">Right</option>
+                        <option value="center">Center</option>
+                      </select>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="formation">Formation (Optional)</Label>
-                  <Input
-                    id="formation"
-                    name="formation"
-                    placeholder="e.g., I-Formation, 4-3 Defense"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    placeholder="Describe the play execution, key points, etc."
-                    className="min-h-[100px]"
-                    required
-                  />
+                    <div className="space-y-2">
+                      <Label htmlFor="formation">Primary Formation</Label>
+                      <Input
+                        id="formation"
+                        name="formation"
+                        placeholder="e.g., I-Formation"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="left-formation">Left Formation</Label>
+                      <Input
+                        id="left-formation"
+                        name="left-formation"
+                        placeholder="e.g., Flex Left (1 Hole)"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="right-formation">Right Formation</Label>
+                      <Input
+                        id="right-formation"
+                        name="right-formation"
+                        placeholder="e.g., Flex Right (2 Hole)"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="description">General Description</Label>
+                      <Textarea
+                        id="description"
+                        name="description"
+                        placeholder="Describe the play execution, key points, etc."
+                        className="min-h-[80px]"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Position Assignments */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Position Assignments</h3>
+                    {['QB', 'F', 'H', 'FB', 'L-TE', 'R-TE', 'OL'].map(position => (
+                      <div key={position} className="space-y-2">
+                        <Label htmlFor={`assignment-${position}`} className="font-mono text-sm">
+                          {position}
+                        </Label>
+                        <Textarea
+                          id={`assignment-${position}`}
+                          name={`assignment-${position}`}
+                          placeholder={`Enter assignment for ${position}...`}
+                          className="min-h-[60px] text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <Button type="submit" className="w-full" disabled={loading}>
@@ -293,73 +383,131 @@ const PlaybookManagement = () => {
           setShowEditPlay(open);
           if (!open) setEditingPlay(null);
         }}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Play</DialogTitle>
               <DialogDescription>
-                Update the play details in your playbook.
+                Update the play details and position assignments in your playbook.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={editPlay} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-play-name">Play Name</Label>
-                <Input
-                  id="edit-play-name"
-                  name="play-name"
-                  defaultValue={editingPlay?.name}
-                  placeholder="e.g., Power Run Left"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="edit-category">Category</Label>
-                <select 
-                  name="category" 
-                  defaultValue={editingPlay?.category}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  required
-                >
-                  <option value="offense">Offense</option>
-                  <option value="defense">Defense</option>
-                  <option value="special_teams">Special Teams</option>
-                </select>
-              </div>
+            <form onSubmit={editPlay} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Basic Info */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold">Basic Information</h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-play-name">Play Name</Label>
+                    <Input
+                      id="edit-play-name"
+                      name="play-name"
+                      defaultValue={editingPlay?.name}
+                      placeholder="e.g., Power I"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-play-number">Play Number/Holes</Label>
+                    <Input
+                      id="edit-play-number"
+                      name="play-number"
+                      defaultValue={editingPlay?.playNumber}
+                      placeholder="e.g., 8/9"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-category">Category</Label>
+                    <select 
+                      name="category" 
+                      defaultValue={editingPlay?.category}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      required
+                    >
+                      <option value="offense">Offense</option>
+                      <option value="defense">Defense</option>
+                      <option value="special_teams">Special Teams</option>
+                    </select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-direction">Direction</Label>
-                <select 
-                  name="direction" 
-                  defaultValue={editingPlay?.direction || ''}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="">Select direction (optional)</option>
-                  <option value="left">Left</option>
-                  <option value="right">Right</option>
-                  <option value="center">Center</option>
-                </select>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-direction">Direction</Label>
+                    <select 
+                      name="direction" 
+                      defaultValue={editingPlay?.direction || ''}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Select direction (optional)</option>
+                      <option value="left">Left</option>
+                      <option value="right">Right</option>
+                      <option value="center">Center</option>
+                    </select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-formation">Formation (Optional)</Label>
-                <Input
-                  id="edit-formation"
-                  name="formation"
-                  defaultValue={editingPlay?.formation}
-                  placeholder="e.g., I-Formation, 4-3 Defense"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">Description</Label>
-                <Textarea
-                  id="edit-description"
-                  name="description"
-                  defaultValue={editingPlay?.description}
-                  placeholder="Describe the play execution, key points, etc."
-                  className="min-h-[100px]"
-                  required
-                />
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-formation">Primary Formation</Label>
+                    <Input
+                      id="edit-formation"
+                      name="formation"
+                      defaultValue={editingPlay?.formation}
+                      placeholder="e.g., I-Formation"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-left-formation">Left Formation</Label>
+                    <Input
+                      id="edit-left-formation"
+                      name="left-formation"
+                      defaultValue={editingPlay?.leftFormation}
+                      placeholder="e.g., Flex Left (1 Hole)"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-right-formation">Right Formation</Label>
+                    <Input
+                      id="edit-right-formation"
+                      name="right-formation"
+                      defaultValue={editingPlay?.rightFormation}
+                      placeholder="e.g., Flex Right (2 Hole)"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-description">General Description</Label>
+                    <Textarea
+                      id="edit-description"
+                      name="description"
+                      defaultValue={editingPlay?.description}
+                      placeholder="Describe the play execution, key points, etc."
+                      className="min-h-[80px]"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Position Assignments */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold">Position Assignments</h3>
+                  {['QB', 'F', 'H', 'FB', 'L-TE', 'R-TE', 'OL'].map(position => {
+                    const existingAssignment = editingPlay?.positionAssignments?.find(a => a.position === position);
+                    return (
+                      <div key={position} className="space-y-2">
+                        <Label htmlFor={`edit-assignment-${position}`} className="font-mono text-sm">
+                          {position}
+                        </Label>
+                        <Textarea
+                          id={`edit-assignment-${position}`}
+                          name={`assignment-${position}`}
+                          defaultValue={existingAssignment?.assignment || ''}
+                          placeholder={`Enter assignment for ${position}...`}
+                          className="min-h-[60px] text-sm"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>
@@ -408,21 +556,39 @@ const PlaybookManagement = () => {
         </div>
 
         {/* Plays Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {filteredPlays.map((play) => (
             <Card key={play.id} className="hover:shadow-md transition-shadow">
                <CardHeader className="pb-3">
                  <div className="flex items-start justify-between">
-                   <div>
-                     <CardTitle className="text-lg">{play.name}</CardTitle>
+                   <div className="flex-1">
+                     <div className="flex items-center gap-2 mb-2">
+                       <CardTitle className="text-lg">{play.name}</CardTitle>
+                       {play.playNumber && (
+                         <Badge variant="outline" className="font-mono text-xs">
+                           {play.playNumber}
+                         </Badge>
+                       )}
+                     </div>
+                     
                      {play.formation && (
-                       <p className="text-sm text-muted-foreground mt-1">
-                         {play.formation}
+                       <p className="text-sm text-muted-foreground">
+                         <strong>Primary:</strong> {play.formation}
                        </p>
                      )}
+                     
+                     <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
+                       {play.leftFormation && (
+                         <span><strong>Left:</strong> {play.leftFormation}</span>
+                       )}
+                       {play.rightFormation && (
+                         <span><strong>Right:</strong> {play.rightFormation}</span>
+                       )}
+                     </div>
+                     
                      {play.direction && (
                        <p className="text-sm text-muted-foreground mt-1 capitalize">
-                         Direction: {play.direction}
+                         <strong>Direction:</strong> {play.direction}
                        </p>
                      )}
                    </div>
@@ -445,11 +611,34 @@ const PlaybookManagement = () => {
                    </div>
                  </div>
                </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-sm text-muted-foreground line-clamp-3">
-                  {play.description}
-                </p>
-                <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
+               
+              <CardContent className="pt-0 space-y-4">
+                <div>
+                  <h4 className="text-sm font-semibold mb-2">General Description</h4>
+                  <p className="text-sm text-muted-foreground line-clamp-2">
+                    {play.description}
+                  </p>
+                </div>
+                
+                {play.positionAssignments && play.positionAssignments.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Position Assignments</h4>
+                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                      {play.positionAssignments.map((assignment, idx) => (
+                        <div key={idx} className="flex gap-2 text-xs">
+                          <span className="font-mono font-semibold min-w-[2.5rem] text-right">
+                            {assignment.position}:
+                          </span>
+                          <span className="text-muted-foreground line-clamp-2 flex-1">
+                            {assignment.assignment}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="pt-3 border-t text-xs text-muted-foreground">
                   Added {new Date(play.created_at).toLocaleDateString()}
                 </div>
               </CardContent>
