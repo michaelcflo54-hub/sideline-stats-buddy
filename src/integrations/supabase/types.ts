@@ -83,6 +83,7 @@ export type Database = {
           email: string
           expires_at: string
           id: string
+          invitation_token: string | null
           invited_by: string
           status: string
           team_id: string
@@ -93,6 +94,7 @@ export type Database = {
           email: string
           expires_at?: string
           id?: string
+          invitation_token?: string | null
           invited_by: string
           status?: string
           team_id: string
@@ -103,6 +105,7 @@ export type Database = {
           email?: string
           expires_at?: string
           id?: string
+          invitation_token?: string | null
           invited_by?: string
           status?: string
           team_id?: string
@@ -381,16 +384,82 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      safe_invitation_summary: {
+        Row: {
+          created_at: string | null
+          email_status: string | null
+          expires_at: string | null
+          invited_by: string | null
+          status: string | null
+          team_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email_status?: never
+          expires_at?: string | null
+          invited_by?: string | null
+          status?: string | null
+          team_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email_status?: never
+          expires_at?: string | null
+          invited_by?: string | null
+          status?: string | null
+          team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_invitations_invited_by"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_invitations_team_id"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "invitations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_invitation: {
         Args: { invitation_id: string }
         Returns: boolean
       }
+      accept_invitation_by_token: {
+        Args: { p_token: string }
+        Returns: boolean
+      }
       can_join_team_by_code: {
         Args: { code: string }
         Returns: boolean
+      }
+      create_team_invitation: {
+        Args: { p_email: string; p_invited_by: string; p_team_id: string }
+        Returns: {
+          expires_at: string
+          invitation_token: string
+        }[]
       }
       get_my_team_details: {
         Args: Record<PropertyKey, never>
