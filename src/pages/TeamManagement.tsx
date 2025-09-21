@@ -140,18 +140,29 @@ const TeamManagement = () => {
     const email = formData.get('email') as string;
 
     try {
-      // For now, we'll just show instructions for manual invitation
-      // In a full implementation, you'd send an email invitation
+      const { error } = await supabase.functions.invoke('send-invitation', {
+        body: {
+          email,
+          teamName: team?.name || 'Your Team',
+          teamCode: team?.id?.slice(0, 8) || '',
+          inviterName: `${profile?.first_name} ${profile?.last_name}`.trim(),
+          appUrl: window.location.origin
+        }
+      });
+
+      if (error) throw error;
+
       toast({
-        title: "Invitation Instructions",
-        description: `Share this information with ${email}: 1) Sign up at this app 2) Use team code: ${team?.id?.slice(0, 8)} 3) Contact you to be added to the team.`
+        title: "Invitation sent!",
+        description: `Email invitation has been sent to ${email}.`
       });
 
       setShowInviteUser(false);
     } catch (error: any) {
+      console.error('Error sending invitation:', error);
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Error sending invitation",
+        description: error.message || 'Failed to send invitation email',
         variant: "destructive"
       });
     } finally {
