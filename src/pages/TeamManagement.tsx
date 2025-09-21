@@ -148,6 +148,7 @@ const TeamManagement = () => {
       const { error } = await supabase.functions.invoke('send-invitation', {
         body: {
           email,
+          teamId: team?.id || '',
           teamName: team?.name || 'Your Team',
           teamCode: team?.team_code || '',
           inviterName: `${profile?.first_name} ${profile?.last_name}`.trim(),

@@ -13,14 +13,9 @@ interface Invitation {
   status: string;
   expires_at: string;
   created_at: string;
-  teams: {
-    name: string;
-    team_code: string;
-  };
-  profiles: {
-    first_name: string;
-    last_name: string;
-  };
+  team_name?: string;
+  team_code?: string;
+  inviter_name?: string;
 }
 
 interface PendingInvitationsProps {
@@ -39,28 +34,52 @@ const PendingInvitations = ({ onAccepted }: PendingInvitationsProps) => {
 
   const fetchInvitations = async () => {
     try {
-      const { data, error } = await supabase
+      // First get the invitations
+      const { data: invitationsData, error: invitationsError } = await supabase
         .from('invitations')
-        .select(`
-          id,
-          team_id,
-          email,
-          status,
-          expires_at,
-          created_at,
-          teams!inner(name, team_code),
-          profiles!invited_by(first_name, last_name)
-        `)
+        .select('*')
         .eq('status', 'pending')
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching invitations:', error);
+      if (invitationsError) {
+        console.error('Error fetching invitations:', invitationsError);
         return;
       }
 
-      setInvitations(data || []);
+      if (!invitationsData || invitationsData.length === 0) {
+        setInvitations([]);
+        return;
+      }
+
+      // Get team names
+      const teamIds = invitationsData.map(inv => inv.team_id);
+      const { data: teamsData } = await supabase
+        .from('teams')
+        .select('id, name, team_code')
+        .in('id', teamIds);
+
+      // Get inviter names
+      const inviterIds = invitationsData.map(inv => inv.invited_by);
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, first_name, last_name')
+        .in('user_id', inviterIds);
+
+      // Combine the data
+      const enrichedInvitations = invitationsData.map(invitation => {
+        const team = teamsData?.find(t => t.id === invitation.team_id);
+        const inviter = profilesData?.find(p => p.user_id === invitation.invited_by);
+        
+        return {
+          ...invitation,
+          team_name: team?.name || 'Unknown Team',
+          team_code: team?.team_code || '',
+          inviter_name: inviter ? `${inviter.first_name} ${inviter.last_name}` : 'Unknown'
+        };
+      });
+
+      setInvitations(enrichedInvitations);
     } catch (error) {
       console.error('Error fetching invitations:', error);
     } finally {
@@ -192,9 +211,9 @@ const PendingInvitations = ({ onAccepted }: PendingInvitationsProps) => {
           <div key={invitation.id} className="border rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-lg">{invitation.teams.name}</h3>
+                <h3 className="font-semibold text-lg">{invitation.team_name}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Invited by {invitation.profiles.first_name} {invitation.profiles.last_name}
+                  Invited by {invitation.inviter_name}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {formatTimeAgo(invitation.created_at)}
