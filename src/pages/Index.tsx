@@ -4,15 +4,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { Plus, Users, Calendar, BarChart3, Settings, Building2, TrendingUp, Archive } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
-  const { profile } = useAuth();
+  const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
   const [team, setTeam] = useState<any>(null);
   const [players, setPlayers] = useState<any[]>([]);
+  
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  // Redirect to landing page if not authenticated
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
   
   const canManageData = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
 
