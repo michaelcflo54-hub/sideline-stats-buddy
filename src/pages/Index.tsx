@@ -14,6 +14,13 @@ const Index = () => {
   const [team, setTeam] = useState<any>(null);
   const [players, setPlayers] = useState<any[]>([]);
   
+  // All hooks must be called before any conditional returns
+  useEffect(() => {
+    if (profile?.team_id) {
+      fetchTeamData();
+    }
+  }, [profile]);
+  
   // Show loading state
   if (loading) {
     return (
@@ -29,12 +36,6 @@ const Index = () => {
   }
   
   const canManageData = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
-
-  useEffect(() => {
-    if (profile?.team_id) {
-      fetchTeamData();
-    }
-  }, [profile]);
 
   const fetchTeamData = async () => {
     try {
