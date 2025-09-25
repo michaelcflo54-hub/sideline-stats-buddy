@@ -34,10 +34,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setLoading(true);
           setTimeout(async () => {
             const { data: profileData } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('user_id', session.user.id)
-              .maybeSingle();
+              .rpc('get_my_full_profile')
+              .single();
             if (!profileData) {
               const meta = (session.user as any).user_metadata || {};
               const { data: newProfile } = await supabase
@@ -49,7 +47,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                   email: session.user.email ?? '',
                   role: meta.role ?? 'parent',
                 })
-                .select('*')
+                .select('id, user_id, team_id, first_name, last_name, email, role, created_at, updated_at')
                 .maybeSingle();
               setProfile(newProfile ?? null);
             } else {
@@ -72,10 +70,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setLoading(true);
         setTimeout(async () => {
           const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
+            .rpc('get_my_full_profile')
+            .single();
           if (!profileData) {
             const meta = (session.user as any).user_metadata || {};
             const { data: newProfile } = await supabase
@@ -87,7 +83,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 email: session.user.email ?? '',
                 role: meta.role ?? 'parent',
               })
-              .select('*')
+              .select('id, user_id, team_id, first_name, last_name, email, role, created_at, updated_at')
               .maybeSingle();
             setProfile(newProfile ?? null);
           } else {

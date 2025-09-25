@@ -406,6 +406,20 @@ export type Database = {
           invitation_token: string
         }[]
       }
+      get_my_full_profile: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          role: Database["public"]["Enums"]["user_role"]
+          team_id: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
       get_my_invitation_summary: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -414,6 +428,19 @@ export type Database = {
           id: string
           status: string
           team_name: string
+        }[]
+      }
+      get_my_public_profile: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          first_name: string
+          id: string
+          last_name: string
+          role: Database["public"]["Enums"]["user_role"]
+          team_id: string
+          updated_at: string
+          user_id: string
         }[]
       }
       get_my_team_details: {
