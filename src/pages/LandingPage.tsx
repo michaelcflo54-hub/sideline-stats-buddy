@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart3, Clock, Target, Smartphone } from 'lucide-react';
+import logoImage from '@/assets/down-and-distance-logo.png';
 
 const LandingPage = () => {
   return (
@@ -10,9 +11,7 @@ const LandingPage = () => {
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-primary-foreground" />
-            </div>
+            <img src={logoImage} alt="Down & Distance Logo" className="w-8 h-8" />
             <span className="text-xl font-bold">Down & Distance</span>
           </div>
           <Link to="/auth">
@@ -186,9 +185,7 @@ const LandingPage = () => {
       <footer className="py-12 border-t">
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-6 h-6 bg-primary rounded flex items-center justify-center">
-              <BarChart3 className="w-4 h-4 text-primary-foreground" />
-            </div>
+            <img src={logoImage} alt="Down & Distance Logo" className="w-6 h-6" />
             <span className="font-bold">Down & Distance</span>
           </div>
           <p className="text-muted-foreground">
