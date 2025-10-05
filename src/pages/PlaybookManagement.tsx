@@ -25,9 +25,9 @@ interface Play {
   category: 'offense' | 'defense' | 'special_teams';
   direction?: 'left' | 'right' | 'center';
   formation?: string;
-  playNumber?: string; // e.g., "8/9"
-  leftFormation?: string; // e.g., "Flex Left (1 Hole)"
-  rightFormation?: string; // e.g., "Flex Right (2 Hole)"
+  playHole?: string;
+  motionLeft?: boolean;
+  motionRight?: boolean;
   positionAssignments: PositionAssignment[];
   created_at: string;
   team_id: string;
@@ -88,9 +88,9 @@ const PlaybookManagement = () => {
       category: formData.get('category') as 'offense' | 'defense' | 'special_teams',
       direction: formData.get('direction') as 'left' | 'right' | 'center' || undefined,
       formation: formData.get('formation') as string || undefined,
-      playNumber: formData.get('play-number') as string || undefined,
-      leftFormation: formData.get('left-formation') as string || undefined,
-      rightFormation: formData.get('right-formation') as string || undefined,
+      playHole: formData.get('play-hole') as string || undefined,
+      motionLeft: formData.get('motion-left') === 'on',
+      motionRight: formData.get('motion-right') === 'on',
       positionAssignments: assignments,
       created_at: new Date().toISOString(),
       team_id: profile.team_id
@@ -150,9 +150,9 @@ const PlaybookManagement = () => {
       category: formData.get('category') as 'offense' | 'defense' | 'special_teams',
       direction: formData.get('direction') as 'left' | 'right' | 'center' || undefined,
       formation: formData.get('formation') as string || undefined,
-      playNumber: formData.get('play-number') as string || undefined,
-      leftFormation: formData.get('left-formation') as string || undefined,
-      rightFormation: formData.get('right-formation') as string || undefined,
+      playHole: formData.get('play-hole') as string || undefined,
+      motionLeft: formData.get('motion-left') === 'on',
+      motionRight: formData.get('motion-right') === 'on',
       positionAssignments: assignments,
     };
 
@@ -262,7 +262,7 @@ const PlaybookManagement = () => {
                   Create a new play for your team's playbook with detailed position assignments.
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={addPlay} className="space-y-6">
+              <form onSubmit={addPlay} className="space-y-6" id="add-play-form">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Basic Info */}
                   <div className="space-y-4">
@@ -278,10 +278,10 @@ const PlaybookManagement = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="play-number">Play Number/Holes</Label>
+                      <Label htmlFor="play-hole">Play Hole</Label>
                       <Input
-                        id="play-number"
-                        name="play-number"
+                        id="play-hole"
+                        name="play-hole"
                         placeholder="e.g., 8/9"
                       />
                     </div>
@@ -289,9 +289,16 @@ const PlaybookManagement = () => {
                     <div className="space-y-2">
                       <Label htmlFor="category">Category</Label>
                       <select 
+                        id="category"
                         name="category" 
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         required
+                        onChange={(e) => {
+                          const directionField = document.getElementById('direction-field');
+                          if (directionField) {
+                            directionField.style.display = e.target.value === 'defense' ? 'block' : 'none';
+                          }
+                        }}
                       >
                         <option value="offense">Offense</option>
                         <option value="defense">Defense</option>
@@ -299,7 +306,7 @@ const PlaybookManagement = () => {
                       </select>
                     </div>
 
-                    <div className="space-y-2">
+                    <div id="direction-field" className="space-y-2" style={{ display: 'none' }}>
                       <Label htmlFor="direction">Direction</Label>
                       <select 
                         name="direction" 
@@ -321,22 +328,32 @@ const PlaybookManagement = () => {
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="left-formation">Left Formation</Label>
-                      <Input
-                        id="left-formation"
-                        name="left-formation"
-                        placeholder="e.g., Flex Left (1 Hole)"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="right-formation">Right Formation</Label>
-                      <Input
-                        id="right-formation"
-                        name="right-formation"
-                        placeholder="e.g., Flex Right (2 Hole)"
-                      />
+                    <div className="space-y-3">
+                      <Label>Motion</Label>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="motion-left"
+                            name="motion-left"
+                            className="h-4 w-4 rounded border-input"
+                          />
+                          <Label htmlFor="motion-left" className="font-normal cursor-pointer">
+                            Motion Left
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="motion-right"
+                            name="motion-right"
+                            className="h-4 w-4 rounded border-input"
+                          />
+                          <Label htmlFor="motion-right" className="font-normal cursor-pointer">
+                            Motion Right
+                          </Label>
+                        </div>
+                      </div>
                     </div>
                     
                     <div className="space-y-2">
@@ -390,7 +407,7 @@ const PlaybookManagement = () => {
                 Update the play details and position assignments in your playbook.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={editPlay} className="space-y-6">
+            <form onSubmit={editPlay} className="space-y-6" id="edit-play-form">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Basic Info */}
                 <div className="space-y-4">
@@ -407,11 +424,11 @@ const PlaybookManagement = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="edit-play-number">Play Number/Holes</Label>
+                    <Label htmlFor="edit-play-hole">Play Hole</Label>
                     <Input
-                      id="edit-play-number"
-                      name="play-number"
-                      defaultValue={editingPlay?.playNumber}
+                      id="edit-play-hole"
+                      name="play-hole"
+                      defaultValue={editingPlay?.playHole}
                       placeholder="e.g., 8/9"
                     />
                   </div>
@@ -419,10 +436,17 @@ const PlaybookManagement = () => {
                   <div className="space-y-2">
                     <Label htmlFor="edit-category">Category</Label>
                     <select 
+                      id="edit-category"
                       name="category" 
                       defaultValue={editingPlay?.category}
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       required
+                      onChange={(e) => {
+                        const directionField = document.getElementById('edit-direction-field');
+                        if (directionField) {
+                          directionField.style.display = e.target.value === 'defense' ? 'block' : 'none';
+                        }
+                      }}
                     >
                       <option value="offense">Offense</option>
                       <option value="defense">Defense</option>
@@ -430,7 +454,7 @@ const PlaybookManagement = () => {
                     </select>
                   </div>
 
-                  <div className="space-y-2">
+                  <div id="edit-direction-field" className="space-y-2" style={{ display: editingPlay?.category === 'defense' ? 'block' : 'none' }}>
                     <Label htmlFor="edit-direction">Direction</Label>
                     <select 
                       name="direction" 
@@ -454,24 +478,34 @@ const PlaybookManagement = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-left-formation">Left Formation</Label>
-                    <Input
-                      id="edit-left-formation"
-                      name="left-formation"
-                      defaultValue={editingPlay?.leftFormation}
-                      placeholder="e.g., Flex Left (1 Hole)"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-right-formation">Right Formation</Label>
-                    <Input
-                      id="edit-right-formation"
-                      name="right-formation"
-                      defaultValue={editingPlay?.rightFormation}
-                      placeholder="e.g., Flex Right (2 Hole)"
-                    />
+                  <div className="space-y-3">
+                    <Label>Motion</Label>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="edit-motion-left"
+                          name="motion-left"
+                          defaultChecked={editingPlay?.motionLeft}
+                          className="h-4 w-4 rounded border-input"
+                        />
+                        <Label htmlFor="edit-motion-left" className="font-normal cursor-pointer">
+                          Motion Left
+                        </Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="edit-motion-right"
+                          name="motion-right"
+                          defaultChecked={editingPlay?.motionRight}
+                          className="h-4 w-4 rounded border-input"
+                          />
+                        <Label htmlFor="edit-motion-right" className="font-normal cursor-pointer">
+                          Motion Right
+                        </Label>
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="space-y-2">
@@ -562,35 +596,41 @@ const PlaybookManagement = () => {
                <CardHeader className="pb-3">
                  <div className="flex items-start justify-between">
                    <div className="flex-1">
-                     <div className="flex items-center gap-2 mb-2">
-                       <CardTitle className="text-lg">{play.name}</CardTitle>
-                       {play.playNumber && (
-                         <Badge variant="outline" className="font-mono text-xs">
-                           {play.playNumber}
-                         </Badge>
-                       )}
-                     </div>
-                     
-                     {play.formation && (
-                       <p className="text-sm text-muted-foreground">
-                         <strong>Primary:</strong> {play.formation}
-                       </p>
-                     )}
-                     
-                     <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-                       {play.leftFormation && (
-                         <span><strong>Left:</strong> {play.leftFormation}</span>
-                       )}
-                       {play.rightFormation && (
-                         <span><strong>Right:</strong> {play.rightFormation}</span>
-                       )}
-                     </div>
-                     
-                     {play.direction && (
-                       <p className="text-sm text-muted-foreground mt-1 capitalize">
-                         <strong>Direction:</strong> {play.direction}
-                       </p>
-                     )}
+                      <div className="flex items-center gap-2 mb-2">
+                        <CardTitle className="text-lg">{play.name}</CardTitle>
+                        {play.playHole && (
+                          <Badge variant="outline" className="font-mono text-xs">
+                            {play.playHole}
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {play.formation && (
+                        <p className="text-sm text-muted-foreground">
+                          <strong>Formation:</strong> {play.formation}
+                        </p>
+                      )}
+                      
+                      {play.direction && (
+                        <p className="text-sm text-muted-foreground mt-1 capitalize">
+                          <strong>Direction:</strong> {play.direction}
+                        </p>
+                      )}
+
+                      {(play.motionLeft || play.motionRight) && (
+                        <div className="flex gap-2 mt-2 text-xs">
+                          {play.motionLeft && (
+                            <Badge variant="secondary" className="text-xs">
+                              Motion Left
+                            </Badge>
+                          )}
+                          {play.motionRight && (
+                            <Badge variant="secondary" className="text-xs">
+                              Motion Right
+                            </Badge>
+                          )}
+                        </div>
+                      )}
                    </div>
                    <div className="flex flex-col gap-2">
                      <Badge 
