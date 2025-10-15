@@ -14,6 +14,28 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// Rate limiting: Track invitation creation per user
+const invitationRateLimits = new Map<string, { count: number; resetTime: number }>();
+const MAX_INVITATIONS_PER_HOUR = 20;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const userLimit = invitationRateLimits.get(userId);
+
+  if (!userLimit || now > userLimit.resetTime) {
+    invitationRateLimits.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+
+  if (userLimit.count >= MAX_INVITATIONS_PER_HOUR) {
+    return false;
+  }
+
+  userLimit.count++;
+  return true;
+}
+
 interface InvitationRequest {
   email: string;
   teamId: string;
@@ -41,6 +63,20 @@ const handler = async (req: Request): Promise<Response> => {
     
     if (!user) {
       throw new Error('Unauthorized');
+    }
+
+    // Check rate limit to prevent abuse
+    if (!checkRateLimit(user.id)) {
+      console.warn(`Rate limit exceeded for user ${user.id}`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Rate limit exceeded. Maximum 20 invitations per hour allowed.' 
+        }),
+        {
+          status: 429,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
     }
 
     // Create secure invitation using the new token-based system

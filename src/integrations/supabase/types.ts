@@ -484,6 +484,15 @@ export type Database = {
         Args: { code: string }
         Returns: boolean
       }
+      validate_invitation_token: {
+        Args: { p_token: string }
+        Returns: {
+          email: string
+          expires_at: string
+          is_valid: boolean
+          team_id: string
+        }[]
+      }
     }
     Enums: {
       field_condition: "dry" | "wet" | "muddy" | "frozen"
