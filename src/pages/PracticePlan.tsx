@@ -276,25 +276,6 @@ const PracticePlan = () => {
           </CardContent>
         </Card>
 
-        {/* Defense Schedule */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Defense</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {/* Header Row */}
-              <div className="grid grid-cols-12 gap-2 font-semibold text-sm border-b pb-2">
-                <div className="col-span-1">PER</div>
-                <div className="col-span-2">TIME</div>
-                <div className="col-span-3">LB</div>
-                <div className="col-span-3">DB</div>
-                <div className="col-span-3">DE/DL</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* More Notes Section */}
         <Card>
           <CardHeader>
