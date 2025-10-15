@@ -395,6 +395,13 @@ export type Database = {
         Args: { p_token: string }
         Returns: boolean
       }
+      assign_team_member_role: {
+        Args: {
+          p_new_role: Database["public"]["Enums"]["user_role"]
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       can_join_team_by_code: {
         Args: { code: string }
         Returns: boolean
@@ -482,6 +489,10 @@ export type Database = {
       }
       join_team_by_code: {
         Args: { code: string }
+        Returns: boolean
+      }
+      request_coach_role: {
+        Args: Record<PropertyKey, never>
         Returns: boolean
       }
       validate_invitation_token: {

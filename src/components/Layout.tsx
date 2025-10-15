@@ -49,14 +49,28 @@ const Layout = ({ children }: LayoutProps) => {
 
   const handleBecomeCoach = async () => {
     if (!profile?.user_id) return;
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role: 'head_coach' })
-      .eq('user_id', profile.user_id);
+    
+    // Use the secure RPC function that only allows the first user to become a coach
+    const { data: success, error } = await supabase
+      .rpc('request_coach_role');
+    
     if (error) {
-      toast({ title: 'Role update failed', description: error.message, variant: 'destructive' });
+      toast({ 
+        title: 'Role update failed', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    } else if (!success) {
+      toast({ 
+        title: 'Request denied', 
+        description: 'Coaches already exist in the system. Please request coach privileges from an existing coach.', 
+        variant: 'destructive' 
+      });
     } else {
-      toast({ title: 'Role updated', description: 'You are now a Head Coach. You can create a team.' });
+      toast({ 
+        title: 'Role updated', 
+        description: 'You are now a Head Coach. You can create a team.' 
+      });
       window.location.reload();
     }
   };
