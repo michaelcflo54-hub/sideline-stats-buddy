@@ -14,7 +14,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Users, Mail, Settings, BookOpen, ArrowLeft, Calendar as CalendarIcon, Edit, Trash2, MessageSquare, Share2 } from 'lucide-react';
+import { Plus, Users, Mail, Settings, BookOpen, ArrowLeft, Calendar as CalendarIcon, Edit, Trash2, MessageSquare, Share2, ClipboardList } from 'lucide-react';
 import { format } from 'date-fns';
 
 const TeamManagement = () => {
@@ -507,14 +507,24 @@ const TeamManagement = () => {
           </div>
           <div className="flex gap-2">
             {canManageTeam && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => navigate('/playbook')}
-              >
-                <BookOpen className="mr-2 h-4 w-4" />
-                Manage Playbook
-              </Button>
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => navigate('/playbook')}
+                >
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  Manage Playbook
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => navigate('/practice-plan')}
+                >
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  Practice Plan
+                </Button>
+              </>
             )}
             <Dialog open={showFeedback} onOpenChange={setShowFeedback}>
               <DialogTrigger asChild>
