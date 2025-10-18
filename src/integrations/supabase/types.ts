@@ -403,6 +403,10 @@ export type Database = {
         Args: { code: string }
         Returns: boolean
       }
+      cleanup_expired_invitations: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       create_team_invitation: {
         Args: { p_email: string; p_invited_by: string; p_team_id: string }
         Returns: {
@@ -454,6 +458,17 @@ export type Database = {
           name: string
           season_year: number
           team_code: string
+        }[]
+      }
+      get_my_team_invitations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          status: string
         }[]
       }
       get_my_team_member_profiles: {
