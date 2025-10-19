@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# PowerPoint playbook files (keep team playbooks private)
+*.pptx
+*.potx

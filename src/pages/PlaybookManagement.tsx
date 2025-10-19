@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, ArrowLeft, BookOpen, Target, Zap, Shield, Edit, Upload } from 'lucide-react';
+import PizZip from 'pizzip';
 
 interface PositionAssignment {
   position: string;
@@ -75,7 +76,7 @@ const PlaybookManagement = () => {
     
     // Parse position assignments from form
     const assignments: PositionAssignment[] = [];
-    const positions = ['QB', 'F', 'H', 'FB', 'L-TE', 'R-TE', 'OL'];
+    const positions = ['QB', 'F', 'H', 'FB', 'LT', 'LG', 'C', 'RG', 'RT', 'TE', 'X', 'Z', 'Y'];
     positions.forEach(pos => {
       const assignment = formData.get(`assignment-${pos}`) as string;
       if (assignment && assignment.trim()) {
@@ -137,7 +138,7 @@ const PlaybookManagement = () => {
     
     // Parse position assignments from form
     const assignments: PositionAssignment[] = [];
-    const positions = ['QB', 'F', 'H', 'FB', 'L-TE', 'R-TE', 'OL'];
+    const positions = ['QB', 'F', 'H', 'FB', 'LT', 'LG', 'C', 'RG', 'RT', 'TE', 'X', 'Z', 'Y'];
     positions.forEach(pos => {
       const assignment = formData.get(`assignment-${pos}`) as string;
       if (assignment && assignment.trim()) {
@@ -185,6 +186,171 @@ const PlaybookManagement = () => {
     }
   };
 
+  const extractTextFromSlide = (slideXml: string): string => {
+    // Extract all text from <a:t> tags in the XML
+    const textMatches = slideXml.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
+    return textMatches.map(match => {
+      const text = match.replace(/<a:t[^>]*>/, '').replace(/<\/a:t>/, '');
+      return text;
+    }).join('\n');
+  };
+
+  const parsePlayFromSlide = (slideText: string, index: number): Play | null => {
+    const lines = slideText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    
+    if (lines.length === 0) return null;
+
+    // Initialize play data
+    let playName = `Play ${index + 1}`;
+    let description = '';
+    let category: 'offense' | 'defense' | 'special_teams' = 'offense';
+    let formation = '';
+    let playHole = '';
+    let direction: 'left' | 'right' | 'center' | undefined = undefined;
+    let motionLeft = false;
+    let motionRight = false;
+    const positionAssignments: PositionAssignment[] = [];
+
+    // First non-empty line is usually the play name
+    if (lines.length > 0) {
+      playName = lines[0];
+      
+      // Check if play name contains hole notation like "Lead (1/2 Hole)"
+      const holeMatch = playName.match(/\((\d+\/\d+)\s*(?:hole)?\)/i);
+      if (holeMatch) {
+        playHole = holeMatch[1];
+      }
+    }
+
+    // All valid position codes
+    const validPositions = ['QB', 'F', 'H', 'FB', 'LT', 'LG', 'C', 'RG', 'RT', 'TE', 'L-TE', 'R-TE', 'X', 'Z', 'Y', 'S', 'Q', 'OL'];
+    
+    // Parse through lines looking for specific patterns
+    let currentPosition = '';
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const lowerLine = line.toLowerCase();
+
+      // Skip header words that are not actual assignments
+      if (line === 'POS' || line === 'Assignment' || line === 'Position') {
+        continue;
+      }
+
+      // Check for standalone play hole (e.g., "8/9", "6/7")
+      if (/^\d+\/\d+$/.test(line)) {
+        playHole = line;
+        continue;
+      }
+      
+      // Check for formation keywords
+      if (lowerLine.includes('formation:')) {
+        formation = line.replace(/formation:/i, '').trim();
+      } else if (lowerLine.match(/\b(i-formation|shotgun|spread|flex|pro|pistol|wing|double wing|single back)\b/i)) {
+        const formationMatch = line.match(/\b(i-formation|shotgun|spread|flex|pro|pistol|wing|double wing|single back)[^\n]*/i);
+        if (formationMatch) {
+          formation = formationMatch[0].trim();
+        }
+      }
+
+      // Check for direction
+      if (lowerLine.includes('direction:')) {
+        const dir = line.replace(/direction:/i, '').trim().toLowerCase();
+        if (dir === 'left' || dir === 'right' || dir === 'center') {
+          direction = dir as 'left' | 'right' | 'center';
+        }
+      } else if (lowerLine.match(/\b(left|right)\b/) && (lowerLine.includes('flex') || lowerLine.includes('formation'))) {
+        if (lowerLine.includes('left')) direction = 'left';
+        if (lowerLine.includes('right')) direction = 'right';
+      }
+
+      // Check for motion
+      if (lowerLine.includes('motion left') || lowerLine.includes('motion-left')) {
+        motionLeft = true;
+      }
+      if (lowerLine.includes('motion right') || lowerLine.includes('motion-right')) {
+        motionRight = true;
+      }
+
+      // Check for category
+      if (lowerLine.includes('offense')) category = 'offense';
+      if (lowerLine.includes('defense')) category = 'defense';
+      if (lowerLine.includes('special team')) category = 'special_teams';
+
+      // Check if this line is a position label
+      const isPositionLabel = validPositions.includes(line);
+      if (isPositionLabel) {
+        currentPosition = line;
+        continue;
+      }
+
+      // If we have a current position and this line is the assignment
+      if (currentPosition && line.length > 2 && !validPositions.includes(line)) {
+        // This is likely the assignment for the current position
+        positionAssignments.push({
+          position: currentPosition,
+          assignment: line
+        });
+        currentPosition = '';
+        continue;
+      }
+
+      // Also check for traditional format: "Position: Assignment" or "Position Assignment"
+      const positionPattern = new RegExp(`^(${validPositions.join('|')})[:\\s]+(.+)$`, 'i');
+      const positionMatch = line.match(positionPattern);
+      if (positionMatch) {
+        positionAssignments.push({
+          position: positionMatch[1].toUpperCase(),
+          assignment: positionMatch[2].trim()
+        });
+      }
+    }
+
+    // Build description from non-assignment text
+    const usedLines = new Set<string>();
+    usedLines.add(playName);
+    if (playHole) usedLines.add(playHole);
+    if (formation) usedLines.add(formation);
+    
+    description = lines.slice(1, 5).filter(line => {
+      const lowerLine = line.toLowerCase();
+      return !usedLines.has(line) &&
+             !validPositions.includes(line) &&
+             line !== 'POS' &&
+             line !== 'Assignment' &&
+             line !== 'Position' &&
+             !line.match(/^(QB|F|H|FB|LT|LG|C|RG|RT|TE|L-TE|R-TE|X|Z|Y|S|Q|OL)[\s:]/i) &&
+             !lowerLine.includes('formation') &&
+             !lowerLine.includes('direction') &&
+             !lowerLine.includes('motion') &&
+             !/^\d+\/\d+$/.test(line) &&
+             line.length > 5;
+    }).join(' ');
+
+    if (!description || description.length < 10) {
+      description = `${playName} play from imported playbook`;
+    }
+
+    // Only return play if it has meaningful content
+    if (positionAssignments.length > 0 || playName !== `Play ${index + 1}`) {
+      return {
+        id: crypto.randomUUID(),
+        name: playName,
+        description,
+        category,
+        direction,
+        formation: formation || undefined,
+        playHole: playHole || undefined,
+        motionLeft,
+        motionRight,
+        positionAssignments,
+        created_at: new Date().toISOString(),
+        team_id: profile.team_id
+      };
+    }
+
+    return null;
+  };
+
   const handleImportPowerPoint = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -207,23 +373,58 @@ const PlaybookManagement = () => {
         description: "This may take a moment. Please wait.",
       });
 
-      // For now, show a message that this feature requires backend processing
-      // In a real implementation, you would:
-      // 1. Upload the file to Supabase Storage
-      // 2. Call an edge function to parse the PowerPoint using a library
-      // 3. Extract play information and return structured data
-      // 4. Create plays from the extracted data
+      // Read the file as ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer();
+      const zip = new PizZip(arrayBuffer);
+
+      // Get all slide files from the PPTX (slides are in ppt/slides/slideN.xml)
+      const slideFiles = Object.keys(zip.files)
+        .filter(filename => filename.match(/ppt\/slides\/slide\d+\.xml$/))
+        .sort((a, b) => {
+          const numA = parseInt(a.match(/slide(\d+)\.xml$/)?.[1] || '0');
+          const numB = parseInt(b.match(/slide(\d+)\.xml$/)?.[1] || '0');
+          return numA - numB;
+        });
+
+      const importedPlays: Play[] = [];
+
+      // Parse each slide
+      for (let i = 0; i < slideFiles.length; i++) {
+        const slideFile = slideFiles[i];
+        const slideXml = zip.files[slideFile].asText();
+        const slideText = extractTextFromSlide(slideXml);
+        
+        const play = parsePlayFromSlide(slideText, i);
+        if (play) {
+          importedPlays.push(play);
+        }
+      }
+
+      if (importedPlays.length === 0) {
+        toast({
+          title: "No plays found",
+          description: "Could not extract any plays from the PowerPoint file.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Add imported plays to the playbook
+      const updatedPlays = [...plays, ...importedPlays];
+      setPlays(updatedPlays);
+      localStorage.setItem(`playbook_${profile.team_id}`, JSON.stringify(updatedPlays));
 
       toast({
-        title: "Import functionality ready",
-        description: "Please manually enter plays for now. Advanced PowerPoint parsing requires backend processing which can be added via Edge Functions.",
+        title: "Import successful!",
+        description: `Imported ${importedPlays.length} play${importedPlays.length > 1 ? 's' : ''} from PowerPoint.`
       });
 
       setShowImport(false);
     } catch (error: any) {
+      console.error('Import error:', error);
       toast({
         title: "Import failed",
-        description: error.message,
+        description: error.message || "Failed to parse PowerPoint file. Please check the file format.",
         variant: "destructive"
       });
     } finally {
@@ -463,19 +664,21 @@ const PlaybookManagement = () => {
                   {/* Position Assignments */}
                   <div className="space-y-4">
                     <h3 className="font-semibold">Position Assignments</h3>
-                    {['QB', 'F', 'H', 'FB', 'L-TE', 'R-TE', 'OL'].map(position => (
-                      <div key={position} className="space-y-2">
-                        <Label htmlFor={`assignment-${position}`} className="font-mono text-sm">
-                          {position}
-                        </Label>
-                        <Textarea
-                          id={`assignment-${position}`}
-                          name={`assignment-${position}`}
-                          placeholder={`Enter assignment for ${position}...`}
-                          className="min-h-[60px] text-sm"
-                        />
-                      </div>
-                    ))}
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                      {['QB', 'F', 'H', 'FB', 'LT', 'LG', 'C', 'RG', 'RT', 'TE', 'X', 'Z', 'Y'].map(position => (
+                        <div key={position} className="space-y-2">
+                          <Label htmlFor={`assignment-${position}`} className="font-mono text-sm font-semibold">
+                            {position}
+                          </Label>
+                          <Textarea
+                            id={`assignment-${position}`}
+                            name={`assignment-${position}`}
+                            placeholder={`Enter assignment for ${position}...`}
+                            className="min-h-[50px] text-sm"
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -617,23 +820,25 @@ const PlaybookManagement = () => {
                 {/* Position Assignments */}
                 <div className="space-y-4">
                   <h3 className="font-semibold">Position Assignments</h3>
-                  {['QB', 'F', 'H', 'FB', 'L-TE', 'R-TE', 'OL'].map(position => {
-                    const existingAssignment = editingPlay?.positionAssignments?.find(a => a.position === position);
-                    return (
-                      <div key={position} className="space-y-2">
-                        <Label htmlFor={`edit-assignment-${position}`} className="font-mono text-sm">
-                          {position}
-                        </Label>
-                        <Textarea
-                          id={`edit-assignment-${position}`}
-                          name={`assignment-${position}`}
-                          defaultValue={existingAssignment?.assignment || ''}
-                          placeholder={`Enter assignment for ${position}...`}
-                          className="min-h-[60px] text-sm"
-                        />
-                      </div>
-                    );
-                  })}
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                    {['QB', 'F', 'H', 'FB', 'LT', 'LG', 'C', 'RG', 'RT', 'TE', 'X', 'Z', 'Y'].map(position => {
+                      const existingAssignment = editingPlay?.positionAssignments?.find(a => a.position === position);
+                      return (
+                        <div key={position} className="space-y-2">
+                          <Label htmlFor={`edit-assignment-${position}`} className="font-mono text-sm font-semibold">
+                            {position}
+                          </Label>
+                          <Textarea
+                            id={`edit-assignment-${position}`}
+                            name={`assignment-${position}`}
+                            defaultValue={existingAssignment?.assignment || ''}
+                            placeholder={`Enter assignment for ${position}...`}
+                            className="min-h-[50px] text-sm"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
