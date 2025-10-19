@@ -12,7 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, ArrowLeft, Play, Target, Flag, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, ArrowLeft, Play, Target, Flag, TrendingUp, TrendingDown, Upload } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface PlaybookPlay {
   id: string;
@@ -62,9 +63,167 @@ const GameDetails = () => {
   const [playbookPlays, setPlaybookPlays] = useState<PlaybookPlay[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddPlay, setShowAddPlay] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [selectedOffenseDefense, setSelectedOffenseDefense] = useState<'offense' | 'defense' | ''>('');
 
   const canManage = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
+
+  const parseExcelPlay = (row: any[], playNumber: number): Partial<PlayData> | null => {
+    // Skip empty rows or header rows
+    if (!row || row.length < 6 || typeof row[0] !== 'number') return null;
+
+    const [
+      playNum,
+      down,
+      distance,
+      fieldPosition,
+      formation,
+      playcall,
+      direction,
+      result,
+      success,
+      ballCarrier,
+      tdTurnoverPenalty,
+      notes
+    ] = row;
+
+    // Determine play type based on playcall
+    let playType: 'run' | 'pass' | 'punt' | 'field_goal' | 'extra_point' | 'kickoff' = 'run';
+    if (playcall && typeof playcall === 'string') {
+      const playcallLower = playcall.toLowerCase();
+      if (playcallLower.includes('smoke') || playcallLower.includes('quick') || playcallLower.includes('pass')) {
+        playType = 'pass';
+      } else if (playcallLower.includes('punt')) {
+        playType = 'punt';
+      } else if (playcallLower.includes('field goal') || playcallLower.includes('fg')) {
+        playType = 'field_goal';
+      } else if (playcallLower.includes('extra point') || playcallLower.includes('pat')) {
+        playType = 'extra_point';
+      } else if (playcallLower.includes('kickoff')) {
+        playType = 'kickoff';
+      }
+    }
+
+    // Determine if it's a touchdown or turnover
+    const isTouchdown = tdTurnoverPenalty && typeof tdTurnoverPenalty === 'string' && 
+                       tdTurnoverPenalty.toLowerCase().includes('td');
+    const isTurnover = tdTurnoverPenalty && typeof tdTurnoverPenalty === 'string' && 
+                      (tdTurnoverPenalty.toLowerCase().includes('turnover') || 
+                       tdTurnoverPenalty.toLowerCase().includes('int') ||
+                       tdTurnoverPenalty.toLowerCase().includes('fumble'));
+
+    // Determine if it's a first down
+    const isFirstDown = success && (success === 'Yes' || success === 'Y' || success === 'y' || success === true);
+
+    // Calculate quarter based on play number (rough estimate)
+    const quarter = Math.min(4, Math.ceil(playNumber / 10));
+
+    return {
+      quarter,
+      down: typeof down === 'number' ? down : 1,
+      distance: typeof distance === 'number' ? distance : 10,
+      yard_line: typeof fieldPosition === 'number' ? fieldPosition : 25,
+      play_type: playType,
+      yards_gained: typeof result === 'number' ? result : 0,
+      is_turnover: isTurnover,
+      is_touchdown: isTouchdown,
+      is_first_down: isFirstDown,
+      play_description: `${formation || 'Unknown'} - ${playcall || 'Unknown'} ${direction || ''}`.trim(),
+      penalty_type: tdTurnoverPenalty && typeof tdTurnoverPenalty === 'string' && 
+                   tdTurnoverPenalty.toLowerCase().includes('penalty') ? 'Unknown' : undefined,
+      penalty_player: ballCarrier && typeof ballCarrier === 'string' ? ballCarrier : undefined,
+    };
+  };
+
+  const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !gameId) return;
+
+    // Validate file type
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an Excel file (.xlsx or .xls)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setImporting(true);
+
+    try {
+      toast({
+        title: "Processing Excel file...",
+        description: "This may take a moment. Please wait.",
+      });
+
+      // Read the Excel file
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      
+      // Get the first sheet (or let user choose)
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      const importedPlays: Partial<PlayData>[] = [];
+      let playNumber = 1;
+
+      // Parse each row
+      for (let i = 1; i < jsonData.length; i++) { // Skip header row
+        const row = jsonData[i] as any[];
+        const play = parseExcelPlay(row, playNumber);
+        if (play) {
+          importedPlays.push(play);
+          playNumber++;
+        }
+      }
+
+      if (importedPlays.length === 0) {
+        toast({
+          title: "No plays found",
+          description: "Could not extract any plays from the Excel file.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Save plays to database
+      const playsToInsert = importedPlays.map(play => ({
+        ...play,
+        game_id: gameId,
+        team_id: profile.team_id,
+        created_at: new Date().toISOString(),
+      }));
+
+      const { error } = await supabase
+        .from('plays')
+        .insert(playsToInsert);
+
+      if (error) throw error;
+
+      toast({
+        title: "Import successful!",
+        description: `Imported ${importedPlays.length} plays from Excel file.`
+      });
+
+      // Refresh the plays list
+      fetchGameData();
+      setShowImport(false);
+    } catch (error: any) {
+      console.error('Import error:', error);
+      toast({
+        title: "Import failed",
+        description: error.message || "Failed to parse Excel file. Please check the file format.",
+        variant: "destructive"
+      });
+    } finally {
+      setImporting(false);
+      // Reset the file input
+      e.target.value = '';
+    }
+  };
 
   useEffect(() => {
     if (gameId && profile?.team_id) {
@@ -255,16 +414,59 @@ const GameDetails = () => {
               </p>
             </div>
           </div>
-          <Dialog open={showAddPlay} onOpenChange={(open) => {
-            setShowAddPlay(open);
-            if (!open) setSelectedOffenseDefense('');
-          }}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Record Play
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Dialog open={showImport} onOpenChange={setShowImport}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import Excel
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Import Plays from Excel</DialogTitle>
+                  <DialogDescription>
+                    Upload an Excel file (.xlsx or .xls) containing your game log. 
+                    The file should have columns for Play #, Down, Distance, Field Position, Formation, Playcall, Direction, Result, Success, Ball Carrier, and Notes.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                    <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <Label htmlFor="excel-upload" className="cursor-pointer">
+                      <span className="text-sm font-medium">Click to upload Excel file</span>
+                      <Input
+                        id="excel-upload"
+                        type="file"
+                        accept=".xlsx,.xls"
+                        onChange={handleExcelImport}
+                        disabled={importing}
+                        className="hidden"
+                      />
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Supports .xlsx and .xls files
+                    </p>
+                  </div>
+                  {importing && (
+                    <div className="text-center text-sm text-muted-foreground">
+                      Processing file... This may take a moment.
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+            
+            <Dialog open={showAddPlay} onOpenChange={(open) => {
+              setShowAddPlay(open);
+              if (!open) setSelectedOffenseDefense('');
+            }}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Record Play
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Record Play</DialogTitle>
@@ -609,7 +811,11 @@ const GameDetails = () => {
               {plays.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   No plays recorded yet. Start tracking the game!
-                  <div className="mt-2">
+                  <div className="mt-4 flex gap-2 justify-center">
+                    <Button onClick={() => setShowImport(true)} variant="outline">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Import from Excel
+                    </Button>
                     <Button onClick={() => setShowAddPlay(true)} variant="outline">
                       <Plus className="mr-2 h-4 w-4" />
                       Record First Play
