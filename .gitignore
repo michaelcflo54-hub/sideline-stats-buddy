@@ -26,3 +26,7 @@ dist-ssr
 # PowerPoint playbook files (keep team playbooks private)
 *.pptx
 *.potx
+
+# Excel game log files (keep team data private)
+*.xlsx
+*.xls

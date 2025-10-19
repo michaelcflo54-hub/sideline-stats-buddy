@@ -827,6 +827,7 @@ const GameDetails = () => {
           </CardContent>
         </Card>
       </div>
+      </div>
     </Layout>
   );
 };
