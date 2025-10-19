@@ -3,10 +3,14 @@ import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { User, Settings, LogOut } from 'lucide-react';
 import JoinTeam from './JoinTeam';
 import PendingInvitations from './PendingInvitations';
+import UserSettings from './UserSettings';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -84,32 +88,62 @@ const Layout = ({ children }: LayoutProps) => {
           </div>
           <div className="flex items-center gap-4">
             {profile && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">
-                  {profile.first_name} {profile.last_name}
-                </span>
-                <Badge variant={getRoleBadgeVariant(profile.role)}>
-                  {formatRole(profile.role)}
-                </Badge>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-auto px-2 hover:bg-muted">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={profile.avatar_url || undefined} alt={`${profile.first_name} ${profile.last_name}`} />
+                        <AvatarFallback className="text-xs">
+                          {profile.first_name?.[0]}{profile.last_name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium">
+                        {profile.first_name} {profile.last_name}
+                      </span>
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {profile.first_name} {profile.last_name}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user?.email}
+                      </p>
+                      <Badge variant={getRoleBadgeVariant(profile.role)} className="w-fit mt-1">
+                        {formatRole(profile.role)}
+                      </Badge>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <UserSettings>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                  </UserSettings>
+                  <UserSettings>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                  </UserSettings>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={signOut} className="text-red-600">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
-            <Button variant="outline" onClick={signOut}>
-              Sign Out
-            </Button>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {/* Debug info - remove later */}
-        <div className="mb-4 p-4 bg-gray-100 rounded text-xs">
-          <div>User: {user?.email}</div>
-          <div>Profile: {profile ? `${profile.first_name} ${profile.last_name}` : 'No profile'}</div>
-          <div>Role: {profile?.role || 'No role'}</div>
-          <div>Team ID: {profile?.team_id || 'No team'}</div>
-          <div>Loading: {loading ? 'true' : 'false'}</div>
-          <div>Should show children: {!profile?.team_id ? 'checking role...' : 'yes'}</div>
-        </div>
         
         {!profile?.team_id ? (
           <div className="space-y-6">
