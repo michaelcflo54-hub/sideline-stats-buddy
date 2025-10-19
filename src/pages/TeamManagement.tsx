@@ -28,7 +28,6 @@ const TeamManagement = () => {
   const [loading, setLoading] = useState(false);
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [showInviteUser, setShowInviteUser] = useState(false);
-  const [showChangeRole, setShowChangeRole] = useState(false);
   const [showScheduleGame, setShowScheduleGame] = useState(false);
   const [showEditGame, setShowEditGame] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -36,7 +35,6 @@ const TeamManagement = () => {
   const [editingGame, setEditingGame] = useState<any>(null);
   const [gameDate, setGameDate] = useState<Date>();
   const [editGameDate, setEditGameDate] = useState<Date>();
-  const [newRole, setNewRole] = useState<'head_coach' | 'assistant_coach' | 'parent' | ''>('');
 
   const canManageTeam = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
 
@@ -176,35 +174,9 @@ const TeamManagement = () => {
     }
   };
 
-  const changeRole = async () => {
-    if (!newRole || !profile?.user_id) return;
-    setLoading(true);
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('user_id', profile.user_id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Role updated!",
-        description: `Your role has been changed to ${formatRole(newRole)}.`
-      });
-
-      setShowChangeRole(false);
-      window.location.reload(); // Refresh to update the layout
-    } catch (error: any) {
-      toast({
-        title: "Error updating role",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Removed insecure self-role-change functionality
+  // Users cannot change their own roles for security reasons
+  // Roles must be assigned by authorized coaches only
 
   const deleteGame = async (gameId: string, gameName: string) => {
     if (!confirm(`Are you sure you want to delete the game vs ${gameName}?`)) return;
@@ -573,46 +545,7 @@ const TeamManagement = () => {
                 </form>
               </DialogContent>
             </Dialog>
-            <Dialog open={showChangeRole} onOpenChange={setShowChangeRole}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Change Role
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Change Your Role</DialogTitle>
-                  <DialogDescription>
-                    Update your role on the team. You can switch between coaching roles.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Current Role</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {formatRole(profile?.role || '')}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>New Role</Label>
-                    <Select value={newRole} onValueChange={(value) => setNewRole(value as 'head_coach' | 'assistant_coach' | 'parent' | '')}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select new role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="head_coach">Head Coach</SelectItem>
-                        <SelectItem value="assistant_coach">Assistant Coach</SelectItem>
-                        <SelectItem value="parent">Parent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button onClick={changeRole} className="w-full" disabled={loading || !newRole}>
-                    {loading ? 'Updating...' : 'Update Role'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            {/* Removed Change Role button - users cannot change their own roles for security */}
             {canManageTeam && (
               <Dialog open={showInviteUser} onOpenChange={setShowInviteUser}>
                 <DialogTrigger asChild>
