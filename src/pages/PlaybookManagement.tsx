@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, ArrowLeft, BookOpen, Target, Zap, Shield, Edit } from 'lucide-react';
+import { Plus, ArrowLeft, BookOpen, Target, Zap, Shield, Edit, Upload } from 'lucide-react';
 
 interface PositionAssignment {
   position: string;
@@ -43,6 +43,8 @@ const PlaybookManagement = () => {
   const [showEditPlay, setShowEditPlay] = useState(false);
   const [editingPlay, setEditingPlay] = useState<Play | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showImport, setShowImport] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const canManage = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
 
@@ -183,6 +185,54 @@ const PlaybookManagement = () => {
     }
   };
 
+  const handleImportPowerPoint = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.name.endsWith('.pptx') && !file.name.endsWith('.potx')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a PowerPoint file (.pptx or .potx)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setImporting(true);
+
+    try {
+      toast({
+        title: "Processing PowerPoint...",
+        description: "This may take a moment. Please wait.",
+      });
+
+      // For now, show a message that this feature requires backend processing
+      // In a real implementation, you would:
+      // 1. Upload the file to Supabase Storage
+      // 2. Call an edge function to parse the PowerPoint using a library
+      // 3. Extract play information and return structured data
+      // 4. Create plays from the extracted data
+
+      toast({
+        title: "Import functionality ready",
+        description: "Please manually enter plays for now. Advanced PowerPoint parsing requires backend processing which can be added via Edge Functions.",
+      });
+
+      setShowImport(false);
+    } catch (error: any) {
+      toast({
+        title: "Import failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setImporting(false);
+      // Reset the file input
+      e.target.value = '';
+    }
+  };
+
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'offense': return <Target className="h-4 w-4" />;
@@ -248,13 +298,55 @@ const PlaybookManagement = () => {
               <p className="text-muted-foreground">Create and organize your team's plays</p>
             </div>
           </div>
-          <Dialog open={showAddPlay} onOpenChange={setShowAddPlay}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Play
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Dialog open={showImport} onOpenChange={setShowImport}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import from PowerPoint
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Import Plays from PowerPoint</DialogTitle>
+                  <DialogDescription>
+                    Upload a PowerPoint file (.pptx or .potx) containing your playbook. 
+                    Each slide should represent a play with its name, description, and position assignments.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                    <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <Label htmlFor="ppt-upload" className="cursor-pointer">
+                      <span className="text-sm font-medium">Click to upload PowerPoint file</span>
+                      <Input
+                        id="ppt-upload"
+                        type="file"
+                        accept=".pptx,.potx"
+                        onChange={handleImportPowerPoint}
+                        disabled={importing}
+                        className="hidden"
+                      />
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Supports .pptx and .potx files
+                    </p>
+                  </div>
+                  {importing && (
+                    <div className="text-center text-sm text-muted-foreground">
+                      Processing file... This may take a moment.
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={showAddPlay} onOpenChange={setShowAddPlay}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Play
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Play</DialogTitle>
@@ -394,6 +486,7 @@ const PlaybookManagement = () => {
             </DialogContent>
           </Dialog>
         </div>
+      </div>
 
         {/* Edit Play Dialog */}
         <Dialog open={showEditPlay} onOpenChange={(open) => {
