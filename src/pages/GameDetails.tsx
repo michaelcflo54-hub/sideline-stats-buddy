@@ -117,18 +117,18 @@ const GameDetails = () => {
     const isFirstDown = success && (success === 'Yes' || success === 'Y' || success === 'y' || success === true);
 
     // Calculate quarter based on play number (rough estimate)
-    const quarter = Math.min(4, Math.ceil(playNumber / 10));
+    const quarter = Math.max(1, Math.min(4, Math.ceil(playNumber / 10)));
 
     return {
       quarter,
-      down: typeof down === 'number' ? down : 1,
-      distance: typeof distance === 'number' ? distance : 10,
-      yard_line: typeof fieldPosition === 'number' ? fieldPosition : 25,
+      down: typeof down === 'number' ? Math.max(1, Math.min(4, down)) : 1,
+      distance: typeof distance === 'number' ? Math.max(1, distance) : 10,
+      yard_line: typeof fieldPosition === 'number' ? Math.max(1, Math.min(100, fieldPosition)) : 25,
       play_type: playType,
       yards_gained: typeof result === 'number' ? result : 0,
-      is_turnover: isTurnover,
-      is_touchdown: isTouchdown,
-      is_first_down: isFirstDown,
+      is_turnover: Boolean(isTurnover),
+      is_touchdown: Boolean(isTouchdown),
+      is_first_down: Boolean(isFirstDown),
       play_description: `${formation || 'Unknown'} - ${playcall || 'Unknown'} ${direction || ''}`.trim(),
       penalty_type: tdTurnoverPenalty && typeof tdTurnoverPenalty === 'string' && 
                    tdTurnoverPenalty.toLowerCase().includes('penalty') ? 'Unknown' : undefined,
