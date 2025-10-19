@@ -1,0 +1,23 @@
+{
+  "name": "analysis-core",
+  "version": "1.0.0",
+  "description": "Pure TypeScript football play analysis library",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "keywords": ["football", "analytics", "sports", "statistics"],
+  "author": "Sideline Stats Buddy",
+  "license": "MIT"
+}
