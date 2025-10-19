@@ -132,6 +132,8 @@ const GameDetails = () => {
       play_description: `${formation || 'Unknown'} - ${playcall || 'Unknown'} ${direction || ''}`.trim(),
       penalty_type: tdTurnoverPenalty && typeof tdTurnoverPenalty === 'string' && 
                    tdTurnoverPenalty.toLowerCase().includes('penalty') ? 'Unknown' : undefined,
+      penalty_team: tdTurnoverPenalty && typeof tdTurnoverPenalty === 'string' && 
+                   tdTurnoverPenalty.toLowerCase().includes('penalty') ? 'us' : undefined,
       penalty_player: ballCarrier && typeof ballCarrier === 'string' ? ballCarrier : undefined,
     };
   };
@@ -193,7 +195,6 @@ const GameDetails = () => {
       const playsToInsert = importedPlays.map(play => ({
         ...play,
         game_id: gameId,
-        team_id: profile.team_id,
         created_at: new Date().toISOString(),
       }));
 
