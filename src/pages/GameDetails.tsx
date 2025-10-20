@@ -12,10 +12,11 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, ArrowLeft, Play, Target, Flag, TrendingUp, TrendingDown, Upload, BarChart3, Users, Trophy } from 'lucide-react';
+import { Plus, ArrowLeft, Play, Target, Flag, TrendingUp, TrendingDown, Upload, BarChart3, Users, Trophy, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { analyzePlays, recommendPlay, type FieldResolvers, type PlayInput } from '../../analysis-core/dist/index';
+import { analyzePlays, recommendPlay } from '../../analysis-core/src/analyze';
+import type { FieldResolvers, PlayInput } from '../../analysis-core/src/index';
 
 interface PlaybookPlay {
   id: string;
@@ -245,6 +246,49 @@ const GameDetails = () => {
       setImporting(false);
       // Reset the file input
       e.target.value = '';
+    }
+  };
+
+  const handleDeletePlay = async (playId: string) => {
+    if (!canManage) {
+      toast({
+        title: "Permission denied",
+        description: "Only coaches can delete plays.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!confirm('Are you sure you want to delete this play? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('plays')
+        .delete()
+        .eq('id', playId);
+
+      if (error) throw error;
+
+      // Update local state
+      setPlays(plays.filter(play => play.id !== playId));
+
+      toast({
+        title: "Play deleted",
+        description: "The play has been removed successfully."
+      });
+    } catch (error: any) {
+      console.error('Error deleting play:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete play.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -820,12 +864,25 @@ const GameDetails = () => {
                         )}
                       </div>
                     </div>
-                    <Badge 
-                      variant={play.is_touchdown ? 'default' : play.is_turnover ? 'destructive' : play.is_first_down ? 'secondary' : 'outline'}
-                      className="flex-shrink-0 text-xs"
-                    >
-                      {getPlayResult(play)}
-                    </Badge>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Badge 
+                        variant={play.is_touchdown ? 'default' : play.is_turnover ? 'destructive' : play.is_first_down ? 'secondary' : 'outline'}
+                        className="text-xs"
+                      >
+                        {getPlayResult(play)}
+                      </Badge>
+                      {canManage && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleDeletePlay(play.id)}
+                          disabled={loading}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1018,6 +1075,7 @@ const GameDetails = () => {
             )}
           </TabsContent>
         </Tabs>
+      </div>
       </div>
     </Layout>
   );
