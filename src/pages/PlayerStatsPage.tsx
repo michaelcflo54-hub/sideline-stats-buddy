@@ -17,6 +17,12 @@ interface PlayerStats {
   positions: string[];
   total_plays: number;
   total_yards: number;
+  rushing_yards: number;
+  rushing_plays: number;
+  passing_yards: number;
+  passing_plays: number;
+  receiving_yards: number;
+  receiving_plays: number;
   touchdowns: number;
   turnovers: number;
   first_downs: number;
@@ -110,11 +116,35 @@ const PlayerStatsPage = () => {
                  ballCarrier.includes(`#${player.jersey_number}`);
         });
 
-        const totalYards = playerPlays.reduce((sum, play) => sum + play.yards_gained, 0);
-        const touchdowns = playerPlays.filter(play => play.is_touchdown).length;
-        const turnovers = playerPlays.filter(play => play.is_turnover).length;
-        const firstDowns = playerPlays.filter(play => play.is_first_down).length;
-        const avgYards = playerPlays.length > 0 ? totalYards / playerPlays.length : 0;
+        // Calculate rushing stats (run plays where this player is ball carrier)
+        const rushingPlays = playerPlays.filter(play => play.play_type === 'run');
+        const rushingYards = rushingPlays.reduce((sum, play) => sum + play.yards_gained, 0);
+        
+        // Calculate passing stats (pass plays where this player is QB)
+        const passingPlays = (playsData || []).filter(play => {
+          const qb = play.quarterback?.toLowerCase() || '';
+          const firstName = player.first_name.toLowerCase();
+          const lastName = player.last_name.toLowerCase();
+          const fullName = `${firstName} ${lastName}`;
+          
+          return (qb.includes(firstName) || qb.includes(lastName) || qb.includes(fullName)) &&
+                 play.play_type === 'pass';
+        });
+        const passingYards = passingPlays.reduce((sum, play) => sum + play.yards_gained, 0);
+        
+        // Calculate receiving stats (pass plays where this player is ball carrier)
+        const receivingPlays = playerPlays.filter(play => play.play_type === 'pass');
+        const receivingYards = receivingPlays.reduce((sum, play) => sum + play.yards_gained, 0);
+        
+        const totalYards = playerPlays.reduce((sum, play) => sum + play.yards_gained, 0) + passingYards;
+        const touchdowns = playerPlays.filter(play => play.is_touchdown).length + 
+                          passingPlays.filter(play => play.is_touchdown).length;
+        const turnovers = playerPlays.filter(play => play.is_turnover).length +
+                         passingPlays.filter(play => play.is_turnover).length;
+        const firstDowns = playerPlays.filter(play => play.is_first_down).length +
+                          passingPlays.filter(play => play.is_first_down).length;
+        const allPlays = [...playerPlays, ...passingPlays];
+        const avgYards = allPlays.length > 0 ? totalYards / allPlays.length : 0;
 
         // Calculate success rate based on down
         const successfulPlays = playerPlays.filter(play => {
@@ -134,8 +164,14 @@ const PlayerStatsPage = () => {
           player_name: `${player.first_name} ${player.last_name}`,
           jersey_number: player.jersey_number,
           positions: player.positions || [],
-          total_plays: playerPlays.length,
+          total_plays: allPlays.length,
           total_yards: totalYards,
+          rushing_yards: rushingYards,
+          rushing_plays: rushingPlays.length,
+          passing_yards: passingYards,
+          passing_plays: passingPlays.length,
+          receiving_yards: receivingYards,
+          receiving_plays: receivingPlays.length,
           touchdowns,
           turnovers,
           first_downs: firstDowns,
@@ -266,50 +302,75 @@ const PlayerStatsPage = () => {
                     <TableRow>
                       <TableHead className="w-12">#</TableHead>
                       <TableHead>Player</TableHead>
-                      <TableHead>Position(s)</TableHead>
-                      <TableHead className="text-right">Plays</TableHead>
-                      <TableHead className="text-right">Yards</TableHead>
+                      <TableHead>Pos</TableHead>
+                      <TableHead className="text-right">Rush Yds</TableHead>
+                      <TableHead className="text-right">Pass Yds</TableHead>
+                      <TableHead className="text-right">Rec Yds</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
                       <TableHead className="text-right">Avg</TableHead>
                       <TableHead className="text-right">TDs</TableHead>
-                      <TableHead className="text-right">1st Downs</TableHead>
-                      <TableHead className="text-right">Success %</TableHead>
+                      <TableHead className="text-right">1st↓</TableHead>
+                      <TableHead className="text-right">SR%</TableHead>
                       <TableHead className="text-right">TOs</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {playerStats.map((stat) => (
                       <TableRow key={stat.player_id}>
-                        <TableCell className="font-medium">#{stat.jersey_number}</TableCell>
-                        <TableCell className="font-medium">{stat.player_name}</TableCell>
+                        <TableCell className="font-medium text-xs">#{stat.jersey_number}</TableCell>
+                        <TableCell className="font-medium text-sm">{stat.player_name}</TableCell>
                         <TableCell>
                           <div className="flex gap-1 flex-wrap">
-                            {stat.positions.slice(0, 3).map((pos, idx) => (
-                              <Badge key={idx} variant="outline" className="text-xs">
+                            {stat.positions.slice(0, 2).map((pos, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs px-1">
                                 {pos}
                               </Badge>
                             ))}
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">{stat.total_plays}</TableCell>
-                        <TableCell className="text-right font-semibold">{stat.total_yards}</TableCell>
-                        <TableCell className="text-right">{stat.avg_yards_per_play.toFixed(1)}</TableCell>
+                        <TableCell className="text-right text-sm">
+                          {stat.rushing_yards > 0 ? (
+                            <div>
+                              <div className="font-semibold">{stat.rushing_yards}</div>
+                              <div className="text-xs text-muted-foreground">({stat.rushing_plays})</div>
+                            </div>
+                          ) : '—'}
+                        </TableCell>
+                        <TableCell className="text-right text-sm">
+                          {stat.passing_yards > 0 ? (
+                            <div>
+                              <div className="font-semibold">{stat.passing_yards}</div>
+                              <div className="text-xs text-muted-foreground">({stat.passing_plays})</div>
+                            </div>
+                          ) : '—'}
+                        </TableCell>
+                        <TableCell className="text-right text-sm">
+                          {stat.receiving_yards > 0 ? (
+                            <div>
+                              <div className="font-semibold">{stat.receiving_yards}</div>
+                              <div className="text-xs text-muted-foreground">({stat.receiving_plays})</div>
+                            </div>
+                          ) : '—'}
+                        </TableCell>
+                        <TableCell className="text-right font-bold text-sm">{stat.total_yards}</TableCell>
+                        <TableCell className="text-right text-sm">{stat.avg_yards_per_play.toFixed(1)}</TableCell>
                         <TableCell className="text-right">
                           {stat.touchdowns > 0 && (
-                            <Badge variant="default" className="text-xs">{stat.touchdowns}</Badge>
+                            <Badge variant="default" className="text-xs px-2">{stat.touchdowns}</Badge>
                           )}
-                          {stat.touchdowns === 0 && '0'}
+                          {stat.touchdowns === 0 && <span className="text-xs text-muted-foreground">—</span>}
                         </TableCell>
-                        <TableCell className="text-right">{stat.first_downs}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right text-sm">{stat.first_downs}</TableCell>
+                        <TableCell className="text-right text-sm">
                           <span className={stat.success_rate >= 0.5 ? 'text-green-600 font-semibold' : ''}>
                             {Math.round(stat.success_rate * 100)}%
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
                           {stat.turnovers > 0 && (
-                            <Badge variant="destructive" className="text-xs">{stat.turnovers}</Badge>
+                            <Badge variant="destructive" className="text-xs px-2">{stat.turnovers}</Badge>
                           )}
-                          {stat.turnovers === 0 && '0'}
+                          {stat.turnovers === 0 && <span className="text-xs text-muted-foreground">—</span>}
                         </TableCell>
                       </TableRow>
                     ))}

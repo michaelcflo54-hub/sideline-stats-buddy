@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, ArrowLeft, Play, Target, Flag, TrendingUp, TrendingDown, Upload, BarChart3, Users, Trophy, Trash2 } from 'lucide-react';
+import { Plus, ArrowLeft, Play, Target, Flag, TrendingUp, TrendingDown, Upload, BarChart3, Users, Trophy, Trash2, Edit } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { analyzePlays, recommendPlay } from '../../analysis-core/src/analyze';
@@ -49,6 +49,7 @@ interface PlayData {
   is_first_down: boolean;
   play_description?: string;
   ball_carrier?: string;
+  quarterback?: string;
   penalty_type?: string;
   penalty_yards?: number;
   penalty_team?: 'us' | 'opponent';
@@ -71,6 +72,8 @@ const GameDetails = () => {
   const [importing, setImporting] = useState(false);
   const [selectedOffenseDefense, setSelectedOffenseDefense] = useState<'offense' | 'defense' | ''>('');
   const [activeTab, setActiveTab] = useState<string>('plays');
+  const [showEditPlay, setShowEditPlay] = useState(false);
+  const [editingPlay, setEditingPlay] = useState<PlayData | null>(null);
 
   const canManage = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
 
@@ -383,6 +386,8 @@ const GameDetails = () => {
       is_touchdown: formData.get('is-touchdown') === 'on',
       is_first_down: formData.get('is-first-down') === 'on',
       play_description: formData.get('play-description') as string,
+      quarterback: formData.get('quarterback') as string || null,
+      ball_carrier: formData.get('player') as string || null,
       penalty_type: formData.get('penalty-type') as string === 'none' ? null : formData.get('penalty-type') as string,
       penalty_yards: parseInt(formData.get('penalty-yards') as string) || null,
       penalty_team: formData.get('penalty-team') as string || null,
@@ -407,6 +412,58 @@ const GameDetails = () => {
     } catch (error: any) {
       toast({
         title: "Error recording play",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const editPlay = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingPlay) return;
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const playData = {
+      quarter: parseInt(formData.get('quarter') as string),
+      down: parseInt(formData.get('down') as string),
+      distance: parseInt(formData.get('distance') as string),
+      yard_line: parseInt(formData.get('yard-line') as string),
+      play_type: formData.get('play-type') as 'run' | 'pass' | 'punt' | 'field_goal' | 'extra_point',
+      yards_gained: parseInt(formData.get('yards-gained') as string) || 0,
+      is_turnover: formData.get('is-turnover') === 'on',
+      is_touchdown: formData.get('is-touchdown') === 'on',
+      is_first_down: formData.get('is-first-down') === 'on',
+      play_description: formData.get('play-description') as string,
+      quarterback: formData.get('quarterback') as string || null,
+      ball_carrier: formData.get('player') as string || null,
+      penalty_type: formData.get('penalty-type') as string === 'none' ? null : formData.get('penalty-type') as string,
+      penalty_yards: parseInt(formData.get('penalty-yards') as string) || null,
+      penalty_team: formData.get('penalty-team') as string || null,
+      penalty_player: formData.get('penalty-player') as string || null,
+    };
+
+    try {
+      const { error } = await supabase
+        .from('plays')
+        .update(playData)
+        .eq('id', editingPlay.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Play updated!",
+        description: "The play has been successfully updated."
+      });
+
+      setShowEditPlay(false);
+      setEditingPlay(null);
+      fetchGameData();
+    } catch (error: any) {
+      toast({
+        title: "Error updating play",
         description: error.message,
         variant: "destructive"
       });
@@ -685,14 +742,14 @@ const GameDetails = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="player">Ball Carrier</Label>
-                    <Select name="player">
+                    <Label htmlFor="quarterback">Quarterback</Label>
+                    <Select name="quarterback">
                       <SelectTrigger>
-                        <SelectValue placeholder="Select player" />
+                        <SelectValue placeholder="Select QB" />
                       </SelectTrigger>
                       <SelectContent>
-                        {players.map((player) => (
-                          <SelectItem key={player.id} value={player.id}>
+                        {players.filter(p => p.positions?.includes('QB')).map((player) => (
+                          <SelectItem key={player.id} value={`${player.first_name} ${player.last_name}`}>
                             #{player.jersey_number} {player.first_name} {player.last_name}
                           </SelectItem>
                         ))}
@@ -700,14 +757,31 @@ const GameDetails = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="yards-gained">Yards Gained</Label>
-                    <Input
-                      id="yards-gained"
-                      name="yards-gained"
-                      type="number"
-                      placeholder="5"
-                    />
+                    <Label htmlFor="player">Ball Carrier</Label>
+                    <Select name="player">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select player" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {players.map((player) => (
+                          <SelectItem key={player.id} value={`${player.first_name} ${player.last_name}`}>
+                            #{player.jersey_number} {player.first_name} {player.last_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="yards-gained">Yards Gained</Label>
+                  <Input
+                    id="yards-gained"
+                    name="yards-gained"
+                    type="number"
+                    placeholder="5"
+                    required
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -831,6 +905,189 @@ const GameDetails = () => {
           </div>
         )}
 
+        {/* Edit Play Dialog */}
+        <Dialog open={showEditPlay} onOpenChange={(open) => {
+          setShowEditPlay(open);
+          if (!open) setEditingPlay(null);
+        }}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Play</DialogTitle>
+              <DialogDescription>
+                Update the play details
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={editPlay} className="space-y-4 pb-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-quarter">Quarter</Label>
+                  <Select name="quarter" required defaultValue={editingPlay?.quarter.toString()}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1st Quarter</SelectItem>
+                      <SelectItem value="2">2nd Quarter</SelectItem>
+                      <SelectItem value="3">3rd Quarter</SelectItem>
+                      <SelectItem value="4">4th Quarter</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-down">Down</Label>
+                  <Select name="down" required defaultValue={editingPlay?.down.toString()}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1st Down</SelectItem>
+                      <SelectItem value="2">2nd Down</SelectItem>
+                      <SelectItem value="3">3rd Down</SelectItem>
+                      <SelectItem value="4">4th Down</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-distance">Distance</Label>
+                  <Input
+                    id="edit-distance"
+                    name="distance"
+                    type="number"
+                    defaultValue={editingPlay?.distance}
+                    placeholder="10"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-yard-line">Yard Line</Label>
+                  <Input
+                    id="edit-yard-line"
+                    name="yard-line"
+                    type="number"
+                    defaultValue={editingPlay?.yard_line}
+                    placeholder="50"
+                    min="1"
+                    max="100"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-play-type">Play Type</Label>
+                <Select name="play-type" required defaultValue={editingPlay?.play_type}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="run">Run</SelectItem>
+                    <SelectItem value="pass">Pass</SelectItem>
+                    <SelectItem value="punt">Punt</SelectItem>
+                    <SelectItem value="field_goal">Field Goal</SelectItem>
+                    <SelectItem value="extra_point">Extra Point</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-quarterback">Quarterback</Label>
+                  <Select name="quarterback" defaultValue={editingPlay?.quarterback || ''}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select QB" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {players.filter(p => p.positions?.includes('QB')).map((player) => (
+                        <SelectItem key={player.id} value={`${player.first_name} ${player.last_name}`}>
+                          #{player.jersey_number} {player.first_name} {player.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-player">Ball Carrier</Label>
+                  <Select name="player" defaultValue={editingPlay?.ball_carrier || ''}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select player" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {players.map((player) => (
+                        <SelectItem key={player.id} value={`${player.first_name} ${player.last_name}`}>
+                          #{player.jersey_number} {player.first_name} {player.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-yards-gained">Yards Gained</Label>
+                <Input
+                  id="edit-yards-gained"
+                  name="yards-gained"
+                  type="number"
+                  defaultValue={editingPlay?.yards_gained}
+                  placeholder="5"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-play-description">Play Description</Label>
+                <Textarea
+                  id="edit-play-description"
+                  name="play-description"
+                  defaultValue={editingPlay?.play_description || ''}
+                  placeholder="Describe the play..."
+                  className="min-h-[60px]"
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="edit-is-touchdown"
+                    name="is-touchdown"
+                    defaultChecked={editingPlay?.is_touchdown}
+                    className="rounded"
+                  />
+                  <Label htmlFor="edit-is-touchdown" className="cursor-pointer">Touchdown</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="edit-is-turnover"
+                    name="is-turnover"
+                    defaultChecked={editingPlay?.is_turnover}
+                    className="rounded"
+                  />
+                  <Label htmlFor="edit-is-turnover" className="cursor-pointer">Turnover</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="edit-is-first-down"
+                    name="is-first-down"
+                    defaultChecked={editingPlay?.is_first_down}
+                    className="rounded"
+                  />
+                  <Label htmlFor="edit-is-first-down" className="cursor-pointer">First Down</Label>
+                </div>
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Updating...' : 'Update Play'}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
         {/* Tabs for Plays and Analytics */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
@@ -877,15 +1134,29 @@ const GameDetails = () => {
                         {getPlayResult(play)}
                       </Badge>
                       {canManage && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleDeletePlay(play.id)}
-                          disabled={loading}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => {
+                              setEditingPlay(play);
+                              setShowEditPlay(true);
+                            }}
+                            disabled={loading}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleDeletePlay(play.id)}
+                            disabled={loading}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
