@@ -268,6 +268,11 @@ const GameDetails = () => {
       // Save plays to database
       const playsToInsert = importedPlays.map(play => ({
         ...play,
+        distance: play.distance ?? 10,
+        down: play.down ?? 1,
+        play_type: play.play_type ?? 'run',
+        quarter: play.quarter ?? 1,
+        yard_line: play.yard_line ?? 50,
         game_id: gameId,
         created_at: new Date().toISOString(),
       }));
@@ -289,6 +294,11 @@ const GameDetails = () => {
             const { ball_carrier, quarterback, ...playWithoutNewFields } = play;
             return {
               ...playWithoutNewFields,
+              distance: play.distance ?? 10,
+              down: play.down ?? 1,
+              play_type: play.play_type ?? 'run',
+              quarter: play.quarter ?? 1,
+              yard_line: play.yard_line ?? 50,
               game_id: gameId,
               created_at: new Date().toISOString(),
             };

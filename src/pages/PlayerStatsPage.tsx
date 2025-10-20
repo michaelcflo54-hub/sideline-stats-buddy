@@ -102,32 +102,18 @@ const PlayerStatsPage = () => {
 
       // Calculate stats for each player
       const stats: PlayerStats[] = players.map(player => {
-        // Match plays by ball carrier name or jersey number
-        const playerPlays = (playsData || []).filter(play => {
-          const ballCarrier = play.ball_carrier?.toLowerCase() || '';
-          const firstName = player.first_name.toLowerCase();
-          const lastName = player.last_name.toLowerCase();
-          const fullName = `${firstName} ${lastName}`;
-          
-          return ballCarrier.includes(firstName) || 
-                 ballCarrier.includes(lastName) ||
-                 ballCarrier.includes(fullName) ||
-                 ballCarrier.includes(`${player.jersey_number}`) ||
-                 ballCarrier.includes(`#${player.jersey_number}`);
-        });
+        // Note: ball_carrier and quarterback fields are not yet available in the plays table
+        // Player stats will need to be tracked through the player_stats table instead
+        const playerPlays: any[] = [];
 
-        // Calculate rushing stats (run plays where this player is ball carrier)
-        const rushingPlays = playerPlays.filter(play => play.play_type === 'run');
-        const rushingYards = rushingPlays.reduce((sum, play) => sum + play.yards_gained, 0);
+        // Calculate rushing stats (placeholder until player_stats are linked)
+        const rushingPlays: any[] = [];
+        const rushingYards = 0;
         
-        // Calculate passing stats (pass plays where this player is QB)
+        // Calculate passing stats (placeholder)
         const passingPlays = (playsData || []).filter(play => {
-          const qb = play.quarterback?.toLowerCase() || '';
-          const firstName = player.first_name.toLowerCase();
-          const lastName = player.last_name.toLowerCase();
-          const fullName = `${firstName} ${lastName}`;
-          
-          return (qb.includes(firstName) || qb.includes(lastName) || qb.includes(fullName)) &&
+          // Placeholder logic until quarterback field is added
+          return false &&
                  play.play_type === 'pass';
         });
         const passingYards = passingPlays.reduce((sum, play) => sum + play.yards_gained, 0);
