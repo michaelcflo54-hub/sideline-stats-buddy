@@ -6,7 +6,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
 type PlayerType = 'offense' | 'defense';
-type Tool = 'select' | 'run' | 'pass' | 'block' | 'erase';
+type Tool = 'select' | 'run' | 'pass' | 'block' | 'erase' | 'freehand';
 
 export interface DesignerNode {
   id: string;
@@ -21,6 +21,7 @@ export interface DesignerEdge {
   from: string; // node id
   to: { x: number; y: number }; // absolute target for simple arrow lines
   style: 'run' | 'pass' | 'block';
+  path?: { x: number; y: number }[]; // for freehand paths
 }
 
 export interface PlayDiagramData {
@@ -55,6 +56,8 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
   const [tool, setTool] = useState<Tool>('select');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [draftEdge, setDraftEdge] = useState<DesignerEdge | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [freehandPath, setFreehandPath] = useState<{ x: number; y: number }[]>([]);
 
   useEffect(() => {
     if (initial) {
@@ -129,9 +132,24 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
       if (!node) return;
       const p = clientToSvg(e);
       setDraftEdge({ id: crypto.randomUUID(), from: node.id, to: p, style: tool });
+    } else if (tool === 'freehand') {
+      const node = nodes.find((n) => n.id === nodeId);
+      if (!node) return;
+      const p = clientToSvg(e);
+      setFreehandPath([p]);
+      setIsDrawing(true);
+      setSelectedNodeId(nodeId);
     } else if (tool === 'erase') {
       // erase edges starting from node
       setEdges((prev) => prev.filter((ed) => ed.from !== nodeId));
+    }
+  };
+
+  const startFreehand = (e: React.PointerEvent) => {
+    if (tool === 'freehand') {
+      const p = clientToSvg(e);
+      setFreehandPath([p]);
+      setIsDrawing(true);
     }
   };
 
@@ -142,7 +160,12 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
       setDraftEdge({ ...draftEdge, to: p });
       return;
     }
-    if (selectedNodeId) {
+    if (isDrawing && tool === 'freehand') {
+      const p = clientToSvg(e);
+      setFreehandPath(prev => [...prev, p]);
+      return;
+    }
+    if (selectedNodeId && tool === 'select') {
       const p = clientToSvg(e);
       setNodes((prev) => prev.map((n) => (n.id === selectedNodeId ? { ...n, x: p.x, y: p.y } : n)));
     }
@@ -153,6 +176,18 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
       setEdges((prev) => [...prev, draftEdge]);
       setDraftEdge(null);
     }
+    if (isDrawing && tool === 'freehand' && freehandPath.length > 1 && selectedNodeId) {
+      const edge: DesignerEdge = {
+        id: crypto.randomUUID(),
+        from: selectedNodeId,
+        to: freehandPath[freehandPath.length - 1],
+        style: 'pass', // default to pass for freehand
+        path: freehandPath
+      };
+      setEdges((prev) => [...prev, edge]);
+      setFreehandPath([]);
+      setIsDrawing(false);
+    }
     setSelectedNodeId(null);
   };
 
@@ -161,6 +196,8 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
     setEdges([]);
     setSelectedNodeId(null);
     setDraftEdge(null);
+    setFreehandPath([]);
+    setIsDrawing(false);
   };
 
   const handleSave = () => {
@@ -210,6 +247,28 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
     });
   };
 
+  // Complex route templates
+  const addComplexRoute = (style: DesignerEdge['style'], path: Array<{ dx: number; dy: number }>) => {
+    if (!selectedNodeId) return;
+    const from = nodes.find(n => n.id === selectedNodeId);
+    if (!from) return;
+    
+    const pathPoints = path.map(p => ({
+      x: snap(from.x + p.dx * GRID_SIZE),
+      y: snap(from.y + p.dy * GRID_SIZE)
+    }));
+    
+    const edge: DesignerEdge = {
+      id: crypto.randomUUID(),
+      from: from.id,
+      to: pathPoints[pathPoints.length - 1],
+      style,
+      path: pathPoints
+    };
+    
+    setEdges(prev => [...prev, edge]);
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
@@ -218,6 +277,7 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
           <Button variant={tool === 'run' ? 'default' : 'outline'} size="sm" onClick={() => setTool('run')}>Run</Button>
           <Button variant={tool === 'pass' ? 'default' : 'outline'} size="sm" onClick={() => setTool('pass')}>Pass</Button>
           <Button variant={tool === 'block' ? 'default' : 'outline'} size="sm" onClick={() => setTool('block')}>Block</Button>
+          <Button variant={tool === 'freehand' ? 'default' : 'outline'} size="sm" onClick={() => setTool('freehand')}>Freehand</Button>
           <Button variant={tool === 'erase' ? 'default' : 'outline'} size="sm" onClick={() => setTool('erase')}>Erase</Button>
         </div>
         <Separator orientation="vertical" className="h-6" />
@@ -225,11 +285,19 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
           <Button size="sm" onClick={() => addNode('offense')}>Add Offense</Button>
           <Button size="sm" variant="secondary" onClick={() => addNode('defense')}>Add Defense</Button>
           <Separator orientation="vertical" className="h-6" />
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
             <Button size="sm" variant="outline" onClick={() => addRoute('run', [{ dx: 0, dy: -1 }, { dx: 1, dy: -1 }])}>Run: Bend</Button>
             <Button size="sm" variant="outline" onClick={() => addRoute('pass', [{ dx: 0, dy: -1 }, { dx: 0, dy: -1 }])}>Pass: Go</Button>
             <Button size="sm" variant="outline" onClick={() => addRoute('pass', [{ dx: 1, dy: 0 }, { dx: 0, dy: -1 }])}>Pass: Out</Button>
             <Button size="sm" variant="outline" onClick={() => addRoute('block', [{ dx: 1, dy: 0 }])}>Block: Step</Button>
+            <Separator orientation="vertical" className="h-6" />
+            <Button size="sm" variant="outline" onClick={() => addComplexRoute('pass', [{ dx: 0, dy: -1 }, { dx: 1, dy: -1 }, { dx: 2, dy: 0 }])}>Slant</Button>
+            <Button size="sm" variant="outline" onClick={() => addComplexRoute('pass', [{ dx: 0, dy: -1 }, { dx: 0, dy: -2 }, { dx: 1, dy: 0 }])}>Post</Button>
+            <Button size="sm" variant="outline" onClick={() => addComplexRoute('pass', [{ dx: 0, dy: -1 }, { dx: 0, dy: -2 }, { dx: 2, dy: -1 }])}>Corner</Button>
+            <Button size="sm" variant="outline" onClick={() => addComplexRoute('pass', [{ dx: 0, dy: 1 }, { dx: -1, dy: 1 }, { dx: -2, dy: 0 }])}>Bubble</Button>
+            <Button size="sm" variant="outline" onClick={() => addComplexRoute('pass', [{ dx: 0, dy: 1 }, { dx: 1, dy: 1 }, { dx: 2, dy: 0 }])}>Screen</Button>
+            <Button size="sm" variant="outline" onClick={() => addComplexRoute('run', [{ dx: 0, dy: -1 }, { dx: 1, dy: 0 }, { dx: 2, dy: 0 }])}>Sweep</Button>
+            <Button size="sm" variant="outline" onClick={() => addComplexRoute('pass', [{ dx: 0, dy: -1 }, { dx: 0, dy: -1 }, { dx: 1, dy: 0 }, { dx: 2, dy: 0 }])}>Drag</Button>
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
@@ -251,6 +319,7 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
           viewBox={`0 0 ${viewBox.width} ${viewBox.height}`}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
+          onPointerDown={startFreehand}
         >
           {/* Grid */}
           <defs>
@@ -276,10 +345,23 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
           {edges.map((ed) => {
             const from = nodes.find((n) => n.id === ed.from);
             if (!from) return null;
+            
+            let pathData = '';
+            if (ed.path && ed.path.length > 1) {
+              // Complex path for freehand or complex routes
+              pathData = `M ${ed.path[0].x} ${ed.path[0].y}`;
+              for (let i = 1; i < ed.path.length; i++) {
+                pathData += ` L ${ed.path[i].x} ${ed.path[i].y}`;
+              }
+            } else {
+              // Simple straight line
+              pathData = `M ${from.x} ${from.y} L ${ed.to.x} ${ed.to.y}`;
+            }
+            
             return (
               <path
                 key={ed.id}
-                d={`M ${from.x} ${from.y} L ${ed.to.x} ${ed.to.y}`}
+                d={pathData}
                 fill="none"
                 stroke={colorByStyle[ed.style]}
                 strokeWidth={3}
@@ -294,6 +376,18 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
               d={`M ${nodes.find((n) => n.id === draftEdge.from)?.x ?? 0} ${nodes.find((n) => n.id === draftEdge.from)?.y ?? 0} L ${draftEdge.to.x} ${draftEdge.to.y}`}
               fill="none"
               stroke={colorByStyle[draftEdge.style]}
+              strokeWidth={3}
+              markerEnd="url(#arrow)"
+              opacity={0.6}
+            />
+          )}
+
+          {/* Freehand path while drawing */}
+          {isDrawing && freehandPath.length > 1 && (
+            <path
+              d={`M ${freehandPath[0].x} ${freehandPath[0].y} ${freehandPath.map(p => `L ${p.x} ${p.y}`).join(' ')}`}
+              fill="none"
+              stroke={colorByStyle.pass}
               strokeWidth={3}
               markerEnd="url(#arrow)"
               opacity={0.6}
@@ -321,7 +415,10 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
       </div>
 
       <div className="flex items-center gap-3">
-        <Label className="text-xs text-muted-foreground">Tip: Select a tool (Run/Pass/Block), click a player, then drag to draw an arrow. Use Erase to remove a player's paths.</Label>
+        <Label className="text-xs text-muted-foreground">
+          Tip: Select a tool (Run/Pass/Block), click a player, then drag to draw an arrow. 
+          Use Freehand to draw custom routes like bubble screens. Use Erase to remove a player's paths.
+        </Label>
       </div>
     </div>
   );
