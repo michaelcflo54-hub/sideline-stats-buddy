@@ -227,16 +227,49 @@ const GameDetails = () => {
         created_at: new Date().toISOString(),
       }));
 
+      console.log('Inserting plays:', playsToInsert[0]); // Debug log
+
       const { error } = await supabase
         .from('plays')
         .insert(playsToInsert);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        
+        // If the error is about missing columns, try without them
+        if (error.message.includes('ball_carrier') || error.message.includes('quarterback')) {
+          console.log('Retrying without ball_carrier and quarterback fields...');
+          
+          const playsToInsertFallback = importedPlays.map(play => {
+            const { ball_carrier, quarterback, ...playWithoutNewFields } = play;
+            return {
+              ...playWithoutNewFields,
+              game_id: gameId,
+              created_at: new Date().toISOString(),
+            };
+          });
 
-      toast({
-        title: "Import successful!",
-        description: `Imported ${importedPlays.length} plays from Excel file.`
-      });
+          const { error: fallbackError } = await supabase
+            .from('plays')
+            .insert(playsToInsertFallback);
+
+          if (fallbackError) {
+            throw new Error(`Database error: ${fallbackError.message}`);
+          }
+
+          toast({
+            title: "Import successful!",
+            description: `Imported ${importedPlays.length} plays from Excel file. Note: ball_carrier and quarterback data was not saved - please run the database migration.`
+          });
+        } else {
+          throw new Error(`Database error: ${error.message}. Please ensure the database migration has been applied.`);
+        }
+      } else {
+        toast({
+          title: "Import successful!",
+          description: `Imported ${importedPlays.length} plays from Excel file.`
+        });
+      }
 
       // Refresh the plays list
       fetchGameData();
