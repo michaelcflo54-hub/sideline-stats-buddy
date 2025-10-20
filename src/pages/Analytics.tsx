@@ -247,15 +247,14 @@ const Analytics = () => {
           <div className="flex items-center gap-4">
             <Button 
               variant="ghost" 
-              size="sm"
-              onClick={() => navigate(-1)}
-              className="flex items-center gap-2"
+              size="icon"
+              onClick={() => navigate('/team')}
+              className="rounded-full"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">Game Analytics</h1>
+              <h1 className="text-3xl font-bold">Team Analytics</h1>
               <p className="text-muted-foreground">Comprehensive performance analysis</p>
             </div>
           </div>

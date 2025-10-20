@@ -191,7 +191,7 @@ const PlayerManagement = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/team')}
               className="rounded-full"
             >
               <ArrowLeft className="h-4 w-4" />

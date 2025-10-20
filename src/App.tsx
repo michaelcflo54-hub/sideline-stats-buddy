@@ -8,7 +8,11 @@ import Index from "./pages/Index";
 import LandingPage from "./pages/LandingPage";
 import Auth from "./pages/Auth";
 import TeamManagement from "./pages/TeamManagement";
+import TeamHub from "./pages/TeamHub";
+import CoachesPage from "./pages/CoachesPage";
 import PlayerManagement from "./pages/PlayerManagement";
+import SchedulePage from "./pages/SchedulePage";
+import PlayerStatsPage from "./pages/PlayerStatsPage";
 import PlaybookManagement from "./pages/PlaybookManagement";
 import PracticePlan from "./pages/PracticePlan";
 import GameDetails from "./pages/GameDetails";
@@ -28,12 +32,18 @@ const App = () => (
             <Route path="/" element={<LandingPage />} />
             <Route path="/dashboard" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/team" element={<TeamManagement />} />
-            <Route path="/players" element={<PlayerManagement />} />
+            <Route path="/team" element={<TeamHub />} />
+            <Route path="/team/coaches" element={<CoachesPage />} />
+            <Route path="/team/players" element={<PlayerManagement />} />
+            <Route path="/team/schedule" element={<SchedulePage />} />
+            <Route path="/team/player-stats" element={<PlayerStatsPage />} />
+            <Route path="/team/analytics" element={<Analytics />} />
             <Route path="/playbook" element={<PlaybookManagement />} />
             <Route path="/practice-plan" element={<PracticePlan />} />
-            <Route path="/analytics" element={<Analytics />} />
             <Route path="/game/:gameId" element={<GameDetails />} />
+            {/* Legacy routes for backward compatibility */}
+            <Route path="/players" element={<PlayerManagement />} />
+            <Route path="/analytics" element={<Analytics />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
