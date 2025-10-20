@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { User, Camera, Save } from 'lucide-react';
+import { User, Save } from 'lucide-react';
 
 interface UserSettingsProps {
   children: React.ReactNode;
@@ -58,71 +58,6 @@ const UserSettings = ({ children }: UserSettingsProps) => {
     }
   };
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !profile?.user_id) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload an image file.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please upload an image smaller than 5MB.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Upload to Supabase Storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${profile.user_id}-${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName);
-
-      // Update profile with new avatar URL
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: data.publicUrl })
-        .eq('user_id', profile.user_id);
-
-      if (updateError) throw updateError;
-
-      toast({
-        title: "Avatar updated",
-        description: "Your profile picture has been updated successfully."
-      });
-
-      window.location.reload(); // Refresh to get updated avatar
-    } catch (error: any) {
-      toast({
-        title: "Upload failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
@@ -159,25 +94,11 @@ const UserSettings = ({ children }: UserSettingsProps) => {
         <div className="space-y-6">
           {/* Avatar Section */}
           <div className="flex flex-col items-center space-y-4">
-            <div className="relative">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={profile?.avatar_url || undefined} alt={`${profile?.first_name} ${profile?.last_name}`} />
-                <AvatarFallback className="text-2xl">
-                  {profile?.first_name?.[0]}{profile?.last_name?.[0]}
-                </AvatarFallback>
-              </Avatar>
-              <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 transition-colors">
-                <Camera className="h-4 w-4" />
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
-                  className="hidden"
-                  disabled={loading}
-                />
-              </label>
-            </div>
+            <Avatar className="h-24 w-24">
+              <AvatarFallback className="text-2xl">
+                {profile?.first_name?.[0]}{profile?.last_name?.[0]}
+              </AvatarFallback>
+            </Avatar>
             <div className="text-center">
               <p className="text-sm font-medium">
                 {profile?.first_name} {profile?.last_name}

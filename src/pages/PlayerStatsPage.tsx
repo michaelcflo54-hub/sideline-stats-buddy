@@ -105,24 +105,25 @@ const PlayerStatsPage = () => {
 
       // Calculate stats for each player
       const stats: PlayerStats[] = players.map(player => {
-        // Match plays by ball carrier name or jersey number
+        // Match plays by ball carrier - prioritize jersey number, then last name
         const playerPlays = (playsData || []).filter(play => {
           const ballCarrier = play.ball_carrier?.toLowerCase() || '';
-          const firstName = player.first_name.toLowerCase();
           const lastName = player.last_name.toLowerCase();
-          const fullName = `${firstName} ${lastName}`;
+          const jerseyNumber = player.jersey_number.toString();
           
-          const isMatch = ballCarrier.includes(firstName) || 
-                 ballCarrier.includes(lastName) ||
-                 ballCarrier.includes(fullName) ||
-                 ballCarrier.includes(`${player.jersey_number}`) ||
-                 ballCarrier.includes(`#${player.jersey_number}`);
-          
-          if (isMatch) {
-            console.log(`Player ${player.first_name} ${player.last_name} matched play:`, play);
+          // First try to match by jersey number (most reliable)
+          if (ballCarrier.includes(jerseyNumber) || ballCarrier.includes(`#${jerseyNumber}`)) {
+            console.log(`Player ${player.first_name} ${player.last_name} (#${jerseyNumber}) matched by jersey:`, play);
+            return true;
           }
           
-          return isMatch;
+          // Then try to match by last name only (more specific than full name)
+          if (ballCarrier.includes(lastName)) {
+            console.log(`Player ${player.first_name} ${player.last_name} (#${jerseyNumber}) matched by last name:`, play);
+            return true;
+          }
+          
+          return false;
         });
 
         // Calculate rushing stats (run plays where this player is ball carrier)
@@ -132,12 +133,20 @@ const PlayerStatsPage = () => {
         // Calculate passing stats (pass plays where this player is QB)
         const passingPlays = (playsData || []).filter(play => {
           const qb = play.quarterback?.toLowerCase() || '';
-          const firstName = player.first_name.toLowerCase();
           const lastName = player.last_name.toLowerCase();
-          const fullName = `${firstName} ${lastName}`;
+          const jerseyNumber = player.jersey_number.toString();
           
-          return (qb.includes(firstName) || qb.includes(lastName) || qb.includes(fullName)) &&
-                 play.play_type === 'pass';
+          // First try to match by jersey number (most reliable)
+          if (qb.includes(jerseyNumber) || qb.includes(`#${jerseyNumber}`)) {
+            return play.play_type === 'pass';
+          }
+          
+          // Then try to match by last name only
+          if (qb.includes(lastName)) {
+            return play.play_type === 'pass';
+          }
+          
+          return false;
         });
         const passingYards = passingPlays.reduce((sum, play) => sum + play.yards_gained, 0);
         
