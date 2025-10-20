@@ -46,6 +46,8 @@ const PlaybookManagement = () => {
   const [showEditPlay, setShowEditPlay] = useState(false);
   const [editingPlay, setEditingPlay] = useState<Play | null>(null);
   const [showDesigner, setShowDesigner] = useState(false);
+  const [showNewDesigner, setShowNewDesigner] = useState(false);
+  const [newDiagramDraft, setNewDiagramDraft] = useState<PlayDiagramData | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showImport, setShowImport] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -547,6 +549,79 @@ const PlaybookManagement = () => {
                     </div>
                   )}
                 </div>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={showNewDesigner} onOpenChange={(open) => {
+              setShowNewDesigner(open);
+              if (!open) setNewDiagramDraft(null);
+            }}>
+              <DialogTrigger asChild>
+                <Button variant="secondary">
+                  <PencilRuler className="mr-2 h-4 w-4" />
+                  Design New Play
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-5xl">
+                <DialogHeader>
+                  <DialogTitle>Design New Play</DialogTitle>
+                  <DialogDescription>Create a diagram, then save it as a play in your playbook.</DialogDescription>
+                </DialogHeader>
+                <PlayDesigner
+                  initial={null}
+                  onSave={(data) => {
+                    setNewDiagramDraft(data);
+                  }}
+                  onCancel={() => setShowNewDesigner(false)}
+                />
+                {newDiagramDraft && (
+                  <form
+                    className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const form = e.currentTarget as HTMLFormElement;
+                      const formData = new FormData(form);
+                      const name = (formData.get('name') as string) || 'New Play';
+                      const category = (formData.get('category') as 'offense' | 'defense' | 'special_teams') || 'offense';
+                      const newPlay: Play = {
+                        id: crypto.randomUUID(),
+                        name,
+                        description: (formData.get('description') as string) || 'Diagram only',
+                        category,
+                        positionAssignments: [],
+                        diagram: newDiagramDraft,
+                        created_at: new Date().toISOString(),
+                        team_id: profile.team_id,
+                      };
+                      const updated = [...plays, newPlay];
+                      setPlays(updated);
+                      localStorage.setItem(`playbook_${profile.team_id}`, JSON.stringify(updated));
+                      toast({ title: 'Play saved', description: `${name} added to playbook.` });
+                      setShowNewDesigner(false);
+                      setNewDiagramDraft(null);
+                    }}
+                  >
+                    <div>
+                      <Label htmlFor="name">Name</Label>
+                      <Input id="name" name="name" placeholder="e.g., Single Wing Off Tackle" required />
+                    </div>
+                    <div>
+                      <Label htmlFor="category">Category</Label>
+                      <select name="category" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                        <option value="offense">Offense</option>
+                        <option value="defense">Defense</option>
+                        <option value="special_teams">Special Teams</option>
+                      </select>
+                    </div>
+                    <div className="md:col-span-3">
+                      <Label htmlFor="description">Description</Label>
+                      <Input id="description" name="description" placeholder="Optional details" />
+                    </div>
+                    <div className="md:col-span-3 flex justify-end gap-2 mt-2">
+                      <Button type="button" variant="ghost" onClick={() => setNewDiagramDraft(null)}>Discard Diagram</Button>
+                      <Button type="submit">Save Play</Button>
+                    </div>
+                  </form>
+                )}
               </DialogContent>
             </Dialog>
             <Dialog open={showAddPlay} onOpenChange={setShowAddPlay}>
