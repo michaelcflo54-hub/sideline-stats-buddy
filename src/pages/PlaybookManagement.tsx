@@ -11,8 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, ArrowLeft, BookOpen, Target, Zap, Shield, Edit, Upload } from 'lucide-react';
+import { Plus, ArrowLeft, BookOpen, Target, Zap, Shield, Edit, Upload, PencilRuler } from 'lucide-react';
 import PizZip from 'pizzip';
+import PlayDesigner, { PlayDiagramData } from '@/components/PlayDesigner';
 
 interface PositionAssignment {
   position: string;
@@ -30,6 +31,7 @@ interface Play {
   motionLeft?: boolean;
   motionRight?: boolean;
   positionAssignments: PositionAssignment[];
+  diagram?: PlayDiagramData; // serialized diagram
   created_at: string;
   team_id: string;
 }
@@ -43,6 +45,7 @@ const PlaybookManagement = () => {
   const [showAddPlay, setShowAddPlay] = useState(false);
   const [showEditPlay, setShowEditPlay] = useState(false);
   const [editingPlay, setEditingPlay] = useState<Play | null>(null);
+  const [showDesigner, setShowDesigner] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showImport, setShowImport] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -127,6 +130,11 @@ const PlaybookManagement = () => {
   const handleEditPlay = (play: Play) => {
     setEditingPlay(play);
     setShowEditPlay(true);
+  };
+
+  const handleDesignPlay = (play: Play) => {
+    setEditingPlay(play);
+    setShowDesigner(true);
   };
 
   const editPlay = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -849,6 +857,39 @@ const PlaybookManagement = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Designer Dialog */}
+        <Dialog open={showDesigner} onOpenChange={(open) => {
+          setShowDesigner(open);
+          if (!open) setEditingPlay(null);
+        }}>
+          <DialogContent className="max-w-5xl">
+            <DialogHeader>
+              <DialogTitle>Design Play Diagram</DialogTitle>
+              <DialogDescription>
+                Drag players and draw colored arrows for run, pass, and block assignments.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <PlayDesigner
+                initial={editingPlay?.diagram || null}
+                onSave={(data) => {
+                  if (!editingPlay) return;
+                  const updated = plays.map(p => p.id === editingPlay.id ? { ...p, diagram: data } : p);
+                  setPlays(updated);
+                  localStorage.setItem(`playbook_${profile.team_id}`, JSON.stringify(updated));
+                  toast({ title: 'Diagram saved', description: `${editingPlay.name} updated.` });
+                  setShowDesigner(false);
+                  setEditingPlay(null);
+                }}
+                onCancel={() => {
+                  setShowDesigner(false);
+                  setEditingPlay(null);
+                }}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Category Filter */}
         <div className="flex gap-2">
           <Button
@@ -946,6 +987,15 @@ const PlaybookManagement = () => {
                      >
                        <Edit className="h-3 w-3" />
                      </Button>
+                     <Button
+                       variant="secondary"
+                       size="sm"
+                       onClick={() => handleDesignPlay(play)}
+                       className="h-7 w-7 p-0"
+                       title="Design Diagram"
+                     >
+                       <PencilRuler className="h-3 w-3" />
+                     </Button>
                    </div>
                  </div>
                </CardHeader>
@@ -972,6 +1022,32 @@ const PlaybookManagement = () => {
                           </span>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+                {play.diagram && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Diagram</h4>
+                    {/* Lightweight preview: render a tiny inline SVG snapshot */}
+                    <div className="rounded border">
+                      <svg viewBox={`0 0 600 360`} width="100%" height={180}>
+                        {/* nodes */}
+                        {play.diagram.nodes.map((n) => (
+                          <g key={n.id}>
+                            {n.type === 'offense' ? (
+                              <circle cx={n.x} cy={n.y} r={6} fill="#10b981" />
+                            ) : (
+                              <polygon points={`${n.x},${n.y - 7} ${n.x - 7},${n.y + 6} ${n.x + 7},${n.y + 6}`} fill="#f59e0b" />
+                            )}
+                          </g>
+                        ))}
+                        {play.diagram.edges.map((ed) => {
+                          const from = play.diagram!.nodes.find(n => n.id === ed.from);
+                          if (!from) return null;
+                          const colors: any = { run: '#ef4444', pass: '#3b82f6', block: '#6b7280' };
+                          return <line key={ed.id} x1={from.x} y1={from.y} x2={ed.to.x} y2={ed.to.y} stroke={colors[ed.style]} strokeWidth={2} />
+                        })}
+                      </svg>
                     </div>
                   </div>
                 )}
