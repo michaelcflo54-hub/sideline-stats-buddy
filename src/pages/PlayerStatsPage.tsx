@@ -96,13 +96,19 @@ const PlayerStatsPage = () => {
 
       // Calculate stats for each player
       const stats: PlayerStats[] = players.map(player => {
-        // For now, we'll use a simple approximation based on play descriptions
-        // In a real implementation, you'd have a player_id field in the plays table
-        const playerPlays = (playsData || []).filter(play => 
-          play.play_description?.toLowerCase().includes(player.first_name.toLowerCase()) ||
-          play.play_description?.toLowerCase().includes(player.last_name.toLowerCase()) ||
-          play.play_description?.toLowerCase().includes(`#${player.jersey_number}`)
-        );
+        // Match plays by ball carrier name or jersey number
+        const playerPlays = (playsData || []).filter(play => {
+          const ballCarrier = play.ball_carrier?.toLowerCase() || '';
+          const firstName = player.first_name.toLowerCase();
+          const lastName = player.last_name.toLowerCase();
+          const fullName = `${firstName} ${lastName}`;
+          
+          return ballCarrier.includes(firstName) || 
+                 ballCarrier.includes(lastName) ||
+                 ballCarrier.includes(fullName) ||
+                 ballCarrier.includes(`${player.jersey_number}`) ||
+                 ballCarrier.includes(`#${player.jersey_number}`);
+        });
 
         const totalYards = playerPlays.reduce((sum, play) => sum + play.yards_gained, 0);
         const touchdowns = playerPlays.filter(play => play.is_touchdown).length;

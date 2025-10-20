@@ -48,6 +48,7 @@ interface PlayData {
   is_touchdown: boolean;
   is_first_down: boolean;
   play_description?: string;
+  ball_carrier?: string;
   penalty_type?: string;
   penalty_yards?: number;
   penalty_team?: 'us' | 'opponent';
@@ -153,11 +154,13 @@ const GameDetails = () => {
       is_touchdown: Boolean(isTouchdown),
       is_first_down: Boolean(isFirstDown),
       play_description: `${formation || 'Unknown'} - ${playcall || 'Unknown'} ${direction || ''}`.trim(),
+      ball_carrier: ballCarrier && typeof ballCarrier === 'string' ? ballCarrier.trim() : undefined,
       penalty_type: tdTurnoverPenalty && typeof tdTurnoverPenalty === 'string' && 
-                   tdTurnoverPenalty.toLowerCase().includes('penalty') ? 'Unknown' : undefined,
+                   tdTurnoverPenalty.toLowerCase().includes('penalty') ? tdTurnoverPenalty : undefined,
       penalty_team: tdTurnoverPenalty && typeof tdTurnoverPenalty === 'string' && 
                    tdTurnoverPenalty.toLowerCase().includes('penalty') ? 'us' : undefined,
-      penalty_player: ballCarrier && typeof ballCarrier === 'string' ? ballCarrier : undefined,
+      penalty_player: tdTurnoverPenalty && typeof tdTurnoverPenalty === 'string' && 
+                     tdTurnoverPenalty.toLowerCase().includes('penalty') ? 'Penalty' : undefined,
     };
   };
 
