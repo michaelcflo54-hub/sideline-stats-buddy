@@ -100,6 +100,9 @@ const PlayerStatsPage = () => {
 
       const { data: playsData } = await query;
 
+      console.log('Plays data for stats:', playsData?.slice(0, 3)); // Debug log
+      console.log('Players data:', players?.slice(0, 3)); // Debug log
+
       // Calculate stats for each player
       const stats: PlayerStats[] = players.map(player => {
         // Match plays by ball carrier name or jersey number
@@ -109,11 +112,17 @@ const PlayerStatsPage = () => {
           const lastName = player.last_name.toLowerCase();
           const fullName = `${firstName} ${lastName}`;
           
-          return ballCarrier.includes(firstName) || 
+          const isMatch = ballCarrier.includes(firstName) || 
                  ballCarrier.includes(lastName) ||
                  ballCarrier.includes(fullName) ||
                  ballCarrier.includes(`${player.jersey_number}`) ||
                  ballCarrier.includes(`#${player.jersey_number}`);
+          
+          if (isMatch) {
+            console.log(`Player ${player.first_name} ${player.last_name} matched play:`, play);
+          }
+          
+          return isMatch;
         });
 
         // Calculate rushing stats (run plays where this player is ball carrier)
@@ -181,6 +190,7 @@ const PlayerStatsPage = () => {
       }).filter(stat => stat.total_plays > 0) // Only show players with recorded plays
         .sort((a, b) => b.total_yards - a.total_yards); // Sort by total yards
 
+      console.log('Final player stats:', stats); // Debug log
       setPlayerStats(stats);
     } catch (error) {
       console.error('Error calculating stats:', error);
