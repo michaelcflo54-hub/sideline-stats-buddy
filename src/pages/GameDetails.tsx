@@ -100,6 +100,8 @@ const GameDetails = () => {
     // Skip empty rows or header rows
     if (!row || row.length < 6 || typeof row[0] !== 'number') return null;
 
+    console.log(`Parsing play ${playNumber}:`, row); // Debug log
+
     const [
       playNum,
       down,
@@ -146,13 +148,51 @@ const GameDetails = () => {
     // Calculate quarter based on play number (rough estimate)
     const quarter = Math.max(1, Math.min(4, Math.ceil(playNumber / 10)));
 
+    // Try to find yards gained in different possible columns
+    let yardsGained = 0;
+    
+    // Check if result is a number
+    if (typeof result === 'number') {
+      yardsGained = result;
+    }
+    // Check if result is a string that contains a number
+    else if (typeof result === 'string') {
+      const match = result.match(/(-?\d+)/);
+      if (match) {
+        yardsGained = parseInt(match[1]);
+      }
+    }
+    
+    // If still 0, try looking in other columns for yards
+    if (yardsGained === 0) {
+      // Check if there's a "yards" column or similar
+      for (let i = 0; i < row.length; i++) {
+        const cell = row[i];
+        if (typeof cell === 'number' && cell !== 0 && Math.abs(cell) <= 50) {
+          // This looks like yards gained (reasonable range)
+          yardsGained = cell;
+          console.log(`Found yards in column ${i}: ${cell}`);
+          break;
+        } else if (typeof cell === 'string') {
+          const match = cell.match(/(-?\d+)\s*yards?/i);
+          if (match) {
+            yardsGained = parseInt(match[1]);
+            console.log(`Found yards in column ${i}: ${cell} -> ${yardsGained}`);
+            break;
+          }
+        }
+      }
+    }
+
+    console.log(`Final yards gained: ${yardsGained} (from result: ${result})`);
+
     return {
       quarter,
       down: typeof down === 'number' ? Math.max(1, Math.min(4, down)) : 1,
       distance: typeof distance === 'number' ? Math.max(1, distance) : 10,
       yard_line: typeof fieldPosition === 'number' ? Math.max(1, Math.min(100, fieldPosition)) : 25,
       play_type: playType,
-      yards_gained: typeof result === 'number' ? result : 0,
+      yards_gained: yardsGained,
       is_turnover: Boolean(isTurnover),
       is_touchdown: Boolean(isTouchdown),
       is_first_down: Boolean(isFirstDown),
@@ -200,6 +240,11 @@ const GameDetails = () => {
 
       const importedPlays: Partial<PlayData>[] = [];
       let playNumber = 1;
+
+      // Log the header row to see column structure
+      if (jsonData.length > 0) {
+        console.log('Excel headers:', jsonData[0]);
+      }
 
       // Parse each row
       for (let i = 1; i < jsonData.length; i++) { // Skip header row
@@ -558,22 +603,22 @@ const GameDetails = () => {
     <Layout>
       <div className="space-y-6">
         {/* Page Title - Always at Top */}
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/team')}
-            className="rounded-full"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h2 className="text-3xl font-bold">vs {game.opponent_name}</h2>
-            <p className="text-muted-foreground">
-              {new Date(game.game_date).toLocaleDateString()} • {game.is_home_game ? 'Home' : 'Away'} Game
-            </p>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/team')}
+              className="rounded-full"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h2 className="text-3xl font-bold">vs {game.opponent_name}</h2>
+              <p className="text-muted-foreground">
+                {new Date(game.game_date).toLocaleDateString()} • {game.is_home_game ? 'Home' : 'Away'} Game
+              </p>
+            </div>
           </div>
-        </div>
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-2">
@@ -619,16 +664,16 @@ const GameDetails = () => {
               </DialogContent>
             </Dialog>
             
-            <Dialog open={showAddPlay} onOpenChange={(open) => {
-              setShowAddPlay(open);
-              if (!open) setSelectedOffenseDefense('');
-            }}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Record Play
-                </Button>
-              </DialogTrigger>
+          <Dialog open={showAddPlay} onOpenChange={(open) => {
+            setShowAddPlay(open);
+            if (!open) setSelectedOffenseDefense('');
+          }}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Record Play
+              </Button>
+            </DialogTrigger>
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Record Play</DialogTitle>
@@ -806,15 +851,15 @@ const GameDetails = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="yards-gained">Yards Gained</Label>
-                  <Input
-                    id="yards-gained"
-                    name="yards-gained"
-                    type="number"
-                    placeholder="5"
+                  <div className="space-y-2">
+                    <Label htmlFor="yards-gained">Yards Gained</Label>
+                    <Input
+                      id="yards-gained"
+                      name="yards-gained"
+                      type="number"
+                      placeholder="5"
                     required
-                  />
+                    />
                 </div>
 
                 <div className="space-y-2">
@@ -932,10 +977,10 @@ const GameDetails = () => {
         {(game.final_score_us !== null && game.final_score_opponent !== null) && (
           <div className="flex justify-center items-center py-3 bg-muted rounded-lg">
             <div className="text-2xl font-bold">
-              {game.final_score_us} - {game.final_score_opponent}
-            </div>
+                  {game.final_score_us} - {game.final_score_opponent}
+                </div>
             <span className="text-sm text-muted-foreground ml-3">Final Score</span>
-          </div>
+              </div>
         )}
 
         {/* Edit Play Dialog */}
@@ -1157,8 +1202,8 @@ const GameDetails = () => {
                             🚩 {play.penalty_type.replace('_', ' ')} - {play.penalty_yards}y ({play.penalty_team === 'us' ? 'Us' : 'Opp'})
                           </div>
                         )}
+                          </div>
                       </div>
-                    </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <Badge 
                         variant={play.is_touchdown ? 'default' : play.is_turnover ? 'destructive' : play.is_first_down ? 'secondary' : 'outline'}
@@ -1247,9 +1292,9 @@ const GameDetails = () => {
                         <div className="text-2xl font-bold">{plays.filter(p => p.is_touchdown).length}</div>
                         <div className="text-xs text-muted-foreground">Touchdowns</div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+            </div>
+          </CardContent>
+        </Card>
 
                 {/* Play Effectiveness Analysis */}
                 {(() => {
