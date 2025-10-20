@@ -464,24 +464,26 @@ const GameDetails = () => {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/team')}
-              className="rounded-full"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h2 className="text-3xl font-bold">vs {game.opponent_name}</h2>
-              <p className="text-muted-foreground">
-                {new Date(game.game_date).toLocaleDateString()} • {game.is_home_game ? 'Home' : 'Away'} Game
-              </p>
-            </div>
+        {/* Page Title - Always at Top */}
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/team')}
+            className="rounded-full"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h2 className="text-3xl font-bold">vs {game.opponent_name}</h2>
+            <p className="text-muted-foreground">
+              {new Date(game.game_date).toLocaleDateString()} • {game.is_home_game ? 'Home' : 'Away'} Game
+            </p>
           </div>
-          <div className="flex gap-2">
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-2">
             <Dialog open={showImport} onOpenChange={setShowImport}>
               <DialogTrigger asChild>
                 <Button variant="outline">
@@ -1075,7 +1077,6 @@ const GameDetails = () => {
             )}
           </TabsContent>
         </Tabs>
-      </div>
       </div>
     </Layout>
   );
