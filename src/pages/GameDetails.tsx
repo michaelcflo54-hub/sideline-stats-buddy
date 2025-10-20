@@ -12,8 +12,10 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, ArrowLeft, Play, Target, Flag, TrendingUp, TrendingDown, Upload } from 'lucide-react';
+import { Plus, ArrowLeft, Play, Target, Flag, TrendingUp, TrendingDown, Upload, BarChart3, Users, Trophy } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { analyzePlays, recommendPlay, type FieldResolvers, type PlayInput } from '../../analysis-core/dist/index';
 
 interface PlaybookPlay {
   id: string;
@@ -66,8 +68,28 @@ const GameDetails = () => {
   const [showImport, setShowImport] = useState(false);
   const [importing, setImporting] = useState(false);
   const [selectedOffenseDefense, setSelectedOffenseDefense] = useState<'offense' | 'defense' | ''>('');
+  const [activeTab, setActiveTab] = useState<string>('plays');
 
   const canManage = profile?.role === 'head_coach' || profile?.role === 'assistant_coach';
+
+  // Field resolvers for analysis-core
+  const playResolvers: FieldResolvers<PlayData> = {
+    gameId: (play) => gameId || '',
+    offenseTeam: (play) => game?.opponent_name ? 'Us' : 'Us',
+    defenseTeam: (play) => game?.opponent_name || 'Opponent',
+    quarter: (play) => play.quarter,
+    down: (play) => play.down as 1 | 2 | 3 | 4,
+    distance: (play) => play.distance,
+    yardLineStart: (play) => play.yard_line,
+    yardsGained: (play) => play.yards_gained,
+    playFamily: (play) => play.play_type,
+    formation: (play) => play.play_description?.split('-')[0]?.trim(),
+    isTouchdown: (play) => play.is_touchdown,
+    isTurnover: (play) => play.is_turnover,
+    isPenalty: (play) => !!play.penalty_type,
+    penaltyYards: (play) => play.penalty_yards,
+    playId: (play) => play.id
+  };
 
   const parseExcelPlay = (row: any[], playNumber: number): Partial<PlayData> | null => {
     // Skip empty rows or header rows
@@ -750,62 +772,60 @@ const GameDetails = () => {
           </Dialog>
         </div>
 
-        {/* Game Score */}
+        {/* Game Score - Compact */}
         {(game.final_score_us !== null && game.final_score_opponent !== null) && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <div className="text-4xl font-bold">
-                  {game.final_score_us} - {game.final_score_opponent}
-                </div>
-                <div className="text-muted-foreground mt-2">Final Score</div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex justify-center items-center py-3 bg-muted rounded-lg">
+            <div className="text-2xl font-bold">
+              {game.final_score_us} - {game.final_score_opponent}
+            </div>
+            <span className="text-sm text-muted-foreground ml-3">Final Score</span>
+          </div>
         )}
 
-        {/* Plays List */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Play className="h-5 w-5" />
+        {/* Tabs for Plays and Analytics */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="plays" className="flex items-center gap-2">
+              <Play className="h-4 w-4" />
               Play by Play ({plays.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="plays" className="mt-4">
+            <div className="space-y-2">
               {plays.map((play, index) => (
-                <div key={play.id} className="p-4 border rounded-lg">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      {getPlayIcon(play)}
-                      <div>
-                        <div className="font-medium">
-                          Q{play.quarter} • {play.down}{play.down === 1 ? 'st' : play.down === 2 ? 'nd' : play.down === 3 ? 'rd' : 'th'} & {play.distance} at {play.yard_line}
-                        </div>
-                        <div className="text-sm text-muted-foreground capitalize">
-                          {play.play_type.replace('_', ' ')} play
+                <div key={play.id} className="p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="flex-shrink-0">{getPlayIcon(play)}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium whitespace-nowrap">
+                            Q{play.quarter} • {play.down}{play.down === 1 ? 'st' : play.down === 2 ? 'nd' : play.down === 3 ? 'rd' : 'th'} & {play.distance}
+                          </span>
+                          <span className="text-xs text-muted-foreground">at {play.yard_line}</span>
+                          <span className="text-xs capitalize">{play.play_type.replace('_', ' ')}</span>
+                          {play.play_description && (
+                            <span className="text-xs text-muted-foreground truncate">{play.play_description}</span>
+                          )}
                         </div>
                         {play.penalty_type && (
-                          <div className="text-sm text-red-600 mt-1">
-                            🚩 {play.penalty_type.replace('_', ' ')} - {play.penalty_yards} yards ({play.penalty_team === 'us' ? 'Our Team' : 'Opponent'})
-                            {play.penalty_player && ` - ${play.penalty_player}`}
-                          </div>
-                        )}
-                        {play.play_description && (
-                          <div className="text-sm text-muted-foreground mt-1">
-                            {play.play_description}
+                          <div className="text-xs text-red-600 mt-0.5">
+                            🚩 {play.penalty_type.replace('_', ' ')} - {play.penalty_yards}y ({play.penalty_team === 'us' ? 'Us' : 'Opp'})
                           </div>
                         )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <Badge 
-                        variant={play.is_touchdown ? 'default' : play.is_turnover ? 'destructive' : 'secondary'}
-                      >
-                        {getPlayResult(play)}
-                      </Badge>
-                    </div>
+                    <Badge 
+                      variant={play.is_touchdown ? 'default' : play.is_turnover ? 'destructive' : play.is_first_down ? 'secondary' : 'outline'}
+                      className="flex-shrink-0 text-xs"
+                    >
+                      {getPlayResult(play)}
+                    </Badge>
                   </div>
                 </div>
               ))}
@@ -813,11 +833,11 @@ const GameDetails = () => {
                 <div className="text-center py-8 text-muted-foreground">
                   No plays recorded yet. Start tracking the game!
                   <div className="mt-4 flex gap-2 justify-center">
-                    <Button onClick={() => setShowImport(true)} variant="outline">
+                    <Button onClick={() => setShowImport(true)} variant="outline" size="sm">
                       <Upload className="mr-2 h-4 w-4" />
                       Import from Excel
                     </Button>
-                    <Button onClick={() => setShowAddPlay(true)} variant="outline">
+                    <Button onClick={() => setShowAddPlay(true)} variant="outline" size="sm">
                       <Plus className="mr-2 h-4 w-4" />
                       Record First Play
                     </Button>
@@ -825,9 +845,179 @@ const GameDetails = () => {
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="mt-4">
+            {plays.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <BarChart3 className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                <p>No plays to analyze yet. Record some plays to see analytics!</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Overall Stats */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Trophy className="h-5 w-5" />
+                      Game Summary
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{plays.length}</div>
+                        <div className="text-xs text-muted-foreground">Total Plays</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{plays.reduce((sum, p) => sum + p.yards_gained, 0)}</div>
+                        <div className="text-xs text-muted-foreground">Total Yards</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{plays.filter(p => p.is_first_down).length}</div>
+                        <div className="text-xs text-muted-foreground">First Downs</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{plays.filter(p => p.is_touchdown).length}</div>
+                        <div className="text-xs text-muted-foreground">Touchdowns</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Play Effectiveness Analysis */}
+                {(() => {
+                  try {
+                    const analysis = analyzePlays(plays as any[], playResolvers, {}, { 
+                      team: 'Us',
+                      minSamplesPerBucket: 3 
+                    });
+                    
+                    return (
+                      <>
+                        {/* Top Plays */}
+                        {analysis.rankedPlays.length > 0 && (
+                          <Card>
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-lg flex items-center gap-2">
+                                <TrendingUp className="h-5 w-5" />
+                                Most Effective Plays
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-2">
+                                {analysis.rankedPlays.slice(0, 5).map((play, index) => (
+                                  <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                                    <div className="flex items-center gap-3 flex-1">
+                                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                                        {index + 1}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-medium truncate">{play.key}</div>
+                                        <div className="text-xs text-muted-foreground">
+                                          {play.sampleSize} plays • {play.raw.avgYards.toFixed(1)} yds/play
+                                          {play.adjusted.lowSample && <span className="ml-1 text-amber-600">⚠️ Low sample</span>}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="text-right flex-shrink-0">
+                                      <div className="text-sm font-bold">{Math.round(play.adjusted.successRate * 100)}%</div>
+                                      <div className="text-xs text-muted-foreground">Success</div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {/* Down & Distance Breakdown */}
+                        {Object.keys(analysis.byDownDistanceTables).length > 0 && (
+                          <Card>
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-lg flex items-center gap-2">
+                                <Target className="h-5 w-5" />
+                                Down & Distance Analysis
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-3">
+                                {Object.entries(analysis.byDownDistanceTables).slice(0, 4).map(([key, playTypes]) => (
+                                  <div key={key} className="border-l-4 border-primary pl-3">
+                                    <div className="font-medium text-sm mb-1">{key}</div>
+                                    {playTypes.slice(0, 2).map((playType, idx) => (
+                                      <div key={idx} className="text-xs text-muted-foreground ml-2">
+                                        • {playType.key}: {Math.round(playType.adjusted.successRate * 100)}% ({playType.sampleSize})
+                                      </div>
+                                    ))}
+                                  </div>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {/* Play Recommendations */}
+                        {(() => {
+                          const thirdLongRec = recommendPlay(plays as any[], playResolvers, { 
+                            down: 3, 
+                            distanceBand: 'long' 
+                          }, { team: 'Us', minSamplesPerBucket: 2 });
+                          
+                          const secondShortRec = recommendPlay(plays as any[], playResolvers, { 
+                            down: 2, 
+                            distanceBand: 'short' 
+                          }, { team: 'Us', minSamplesPerBucket: 2 });
+
+                          if (thirdLongRec.recommendation || secondShortRec.recommendation) {
+                            return (
+                              <Card>
+                                <CardHeader className="pb-3">
+                                  <CardTitle className="text-lg flex items-center gap-2">
+                                    <Flag className="h-5 w-5" />
+                                    Play Recommendations
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                  {thirdLongRec.recommendation && (
+                                    <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
+                                      <div className="text-xs font-medium text-green-900 dark:text-green-100 mb-1">3rd & Long</div>
+                                      <div className="text-sm font-semibold">{thirdLongRec.recommendation.key}</div>
+                                      <div className="text-xs text-green-700 dark:text-green-300 mt-1">
+                                        {Math.round(thirdLongRec.recommendation.adjusted.successRate * 100)}% success rate • {thirdLongRec.recommendation.raw.avgYards.toFixed(1)} yds
+                                      </div>
+                                    </div>
+                                  )}
+                                  {secondShortRec.recommendation && (
+                                    <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                                      <div className="text-xs font-medium text-blue-900 dark:text-blue-100 mb-1">2nd & Short</div>
+                                      <div className="text-sm font-semibold">{secondShortRec.recommendation.key}</div>
+                                      <div className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                                        {Math.round(secondShortRec.recommendation.adjusted.successRate * 100)}% success rate • {secondShortRec.recommendation.raw.avgYards.toFixed(1)} yds
+                                      </div>
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </>
+                    );
+                  } catch (error) {
+                    console.error('Analytics error:', error);
+                    return (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>Unable to generate analytics. Please ensure you have enough play data.</p>
+                      </div>
+                    );
+                  }
+                })()}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </Layout>
   );
