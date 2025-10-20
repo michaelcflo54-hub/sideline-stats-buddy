@@ -35,8 +35,9 @@ interface PlayDesignerProps {
   onCancel?: () => void;
 }
 
-const GRID_SIZE = 24; // pixels per grid cell
-const FIELD_PADDING = 16;
+const GRID_SIZE = 20; // pixels per grid cell (smaller for more detail)
+const FIELD_PADDING = 20;
+const YARD_LINE_SPACING = 10; // 10 yards per major line
 
 const colorByStyle: Record<DesignerEdge['style'], string> = {
   run: '#ef4444', // red
@@ -67,8 +68,8 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
   }, [initial]);
 
   const viewBox = useMemo(() => {
-    const width = GRID_SIZE * 24 + FIELD_PADDING * 2; // ~half field
-    const height = GRID_SIZE * 14 + FIELD_PADDING * 2; // hash-to-hash area look
+    const width = GRID_SIZE * 30 + FIELD_PADDING * 2; // 30 grid units wide
+    const height = GRID_SIZE * 20 + FIELD_PADDING * 2; // 20 grid units tall
     return { width, height };
   }, []);
 
@@ -87,20 +88,26 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
     // constrain to inner field bounds
     const x = Math.max(FIELD_PADDING, Math.min(p.x, viewBox.width - FIELD_PADDING));
     const y = Math.max(FIELD_PADDING, Math.min(p.y, viewBox.height - FIELD_PADDING));
-    // snap with 8px tolerance; if drawing an edge and Shift is held, snap to 45° increments
-    const snapped = { x: snap(x), y: snap(y) };
-    if (draftEdge && (e.shiftKey || tool !== 'select')) {
-      const from = nodes.find(n => n.id === draftEdge.from);
-      if (from) {
-        const dx = snapped.x - from.x;
-        const dy = snapped.y - from.y;
-        const angle = Math.atan2(dy, dx);
-        const snap45 = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
-        const dist = Math.hypot(dx, dy);
-        return { x: snap(from.x + Math.cos(snap45) * dist), y: snap(from.y + Math.sin(snap45) * dist) };
+    
+    // Only snap for non-freehand tools
+    if (tool !== 'freehand') {
+      const snapped = { x: snap(x), y: snap(y) };
+      if (draftEdge && (e.shiftKey || tool !== 'select')) {
+        const from = nodes.find(n => n.id === draftEdge.from);
+        if (from) {
+          const dx = snapped.x - from.x;
+          const dy = snapped.y - from.y;
+          const angle = Math.atan2(dy, dx);
+          const snap45 = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+          const dist = Math.hypot(dx, dy);
+          return { x: snap(from.x + Math.cos(snap45) * dist), y: snap(from.y + Math.sin(snap45) * dist) };
+        }
       }
+      return snapped;
     }
-    return snapped;
+    
+    // For freehand, return unsnapped coordinates
+    return { x, y };
   };
 
   const addNode = (type: PlayerType) => {
@@ -237,14 +244,22 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
     if (!selectedNodeId) return;
     const from = nodes.find(n => n.id === selectedNodeId);
     if (!from) return;
-    let lastX = from.x;
-    let lastY = from.y;
-    points.forEach((p) => {
-      const to = { x: snap(lastX + p.dx * GRID_SIZE), y: snap(lastY + p.dy * GRID_SIZE) };
-      const id = crypto.randomUUID();
-      setEdges(prev => [...prev, { id, from: from.id, to, style }]);
-      lastX = to.x; lastY = to.y;
-    });
+    
+    // Create a single edge with multiple waypoints
+    const pathPoints = points.map(p => ({
+      x: snap(from.x + p.dx * GRID_SIZE),
+      y: snap(from.y + p.dy * GRID_SIZE)
+    }));
+    
+    const edge: DesignerEdge = {
+      id: crypto.randomUUID(),
+      from: from.id,
+      to: pathPoints[pathPoints.length - 1],
+      style,
+      path: pathPoints
+    };
+    
+    setEdges(prev => [...prev, edge]);
   };
 
   // Complex route templates
@@ -324,21 +339,71 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
           {/* Grid */}
           <defs>
             <pattern id="grid" width={GRID_SIZE} height={GRID_SIZE} patternUnits="userSpaceOnUse">
-              <path d={`M ${GRID_SIZE} 0 L 0 0 0 ${GRID_SIZE}`} fill="none" stroke="#e5e7eb" strokeWidth="1" />
+              <path d={`M ${GRID_SIZE} 0 L 0 0 0 ${GRID_SIZE}`} fill="none" stroke="#f3f4f6" strokeWidth="0.5" />
             </pattern>
-            <marker id="arrow" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto" markerUnits="strokeWidth">
-              <path d="M0,0 L8,4 L0,8 z" fill="currentColor" />
+            <marker id="arrow" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L6,3 L0,6 z" fill="currentColor" />
             </marker>
           </defs>
           <rect x={0} y={0} width={viewBox.width} height={viewBox.height} fill="url(#grid)" />
-          {/* Hash marks (simple) */}
-          {Array.from({ length: 10 }).map((_, i) => {
-            const x = FIELD_PADDING + GRID_SIZE * (i * 2 + 2);
+          
+          {/* Football field yard lines (every 10 yards) */}
+          {Array.from({ length: 11 }).map((_, i) => {
+            const x = FIELD_PADDING + (i * GRID_SIZE * YARD_LINE_SPACING);
+            const yardNumber = i * 10;
             return (
-              <g key={i} opacity={0.25}>
-                <line x1={x} x2={x} y1={FIELD_PADDING} y2={viewBox.height - FIELD_PADDING} stroke="#9ca3af" strokeDasharray="4 8" />
+              <g key={i}>
+                <line 
+                  x1={x} 
+                  x2={x} 
+                  y1={FIELD_PADDING} 
+                  y2={viewBox.height - FIELD_PADDING} 
+                  stroke="#374151" 
+                  strokeWidth="2"
+                />
+                <text 
+                  x={x} 
+                  y={FIELD_PADDING - 5} 
+                  textAnchor="middle" 
+                  fontSize="10" 
+                  fill="#374151"
+                  fontWeight="bold"
+                >
+                  {yardNumber}
+                </text>
+                <text 
+                  x={x} 
+                  y={viewBox.height - FIELD_PADDING + 15} 
+                  textAnchor="middle" 
+                  fontSize="10" 
+                  fill="#374151"
+                  fontWeight="bold"
+                >
+                  {yardNumber}
+                </text>
               </g>
             );
+          })}
+          
+          {/* Hash marks (every 5 yards) */}
+          {Array.from({ length: 21 }).map((_, i) => {
+            const x = FIELD_PADDING + (i * GRID_SIZE * 5);
+            if (x > FIELD_PADDING && x < viewBox.width - FIELD_PADDING) {
+              return (
+                <g key={`hash-${i}`} opacity={0.4}>
+                  <line 
+                    x1={x} 
+                    x2={x} 
+                    y1={FIELD_PADDING + GRID_SIZE * 2} 
+                    y2={viewBox.height - FIELD_PADDING - GRID_SIZE * 2} 
+                    stroke="#9ca3af" 
+                    strokeDasharray="2 4" 
+                    strokeWidth="1"
+                  />
+                </g>
+              );
+            }
+            return null;
           })}
 
           {/* Edges */}
@@ -364,7 +429,7 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
                 d={pathData}
                 fill="none"
                 stroke={colorByStyle[ed.style]}
-                strokeWidth={3}
+                strokeWidth={2}
                 markerEnd="url(#arrow)"
               />
             );
@@ -376,7 +441,7 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
               d={`M ${nodes.find((n) => n.id === draftEdge.from)?.x ?? 0} ${nodes.find((n) => n.id === draftEdge.from)?.y ?? 0} L ${draftEdge.to.x} ${draftEdge.to.y}`}
               fill="none"
               stroke={colorByStyle[draftEdge.style]}
-              strokeWidth={3}
+              strokeWidth={2}
               markerEnd="url(#arrow)"
               opacity={0.6}
             />
@@ -388,7 +453,7 @@ export default function PlayDesigner({ initial, onSave, onCancel }: PlayDesigner
               d={`M ${freehandPath[0].x} ${freehandPath[0].y} ${freehandPath.map(p => `L ${p.x} ${p.y}`).join(' ')}`}
               fill="none"
               stroke={colorByStyle.pass}
-              strokeWidth={3}
+              strokeWidth={2}
               markerEnd="url(#arrow)"
               opacity={0.6}
             />

@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, ArrowLeft, BookOpen, Target, Zap, Shield, Edit, Upload, PencilRuler } from 'lucide-react';
 import PizZip from 'pizzip';
 import PlayDesigner, { PlayDiagramData } from '@/components/PlayDesigner';
+import PowerPointDesigner, { PowerPointDesign } from '@/components/PowerPointDesigner';
 
 interface PositionAssignment {
   position: string;
@@ -32,6 +33,7 @@ interface Play {
   motionRight?: boolean;
   positionAssignments: PositionAssignment[];
   diagram?: PlayDiagramData; // serialized diagram
+  powerpoint_design?: PowerPointDesign; // PowerPoint-style design
   created_at: string;
   team_id: string;
 }
@@ -47,7 +49,9 @@ const PlaybookManagement = () => {
   const [editingPlay, setEditingPlay] = useState<Play | null>(null);
   const [showDesigner, setShowDesigner] = useState(false);
   const [showNewDesigner, setShowNewDesigner] = useState(false);
+  const [showPowerPointDesigner, setShowPowerPointDesigner] = useState(false);
   const [newDiagramDraft, setNewDiagramDraft] = useState<PlayDiagramData | null>(null);
+  const [newPowerPointDraft, setNewPowerPointDraft] = useState<PowerPointDesign | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showImport, setShowImport] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -561,11 +565,94 @@ const PlaybookManagement = () => {
                   Design New Play
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-5xl">
+            </Dialog>
+            
+            <Dialog open={showPowerPointDesigner} onOpenChange={(open) => {
+              setShowPowerPointDesigner(open);
+              if (!open) setNewPowerPointDraft(null);
+            }}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <PencilRuler className="mr-2 h-4 w-4" />
+                  PowerPoint Style
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Design New Play</DialogTitle>
-                  <DialogDescription>Create a diagram, then save it as a play in your playbook.</DialogDescription>
+                  <DialogTitle>PowerPoint Style Play Designer</DialogTitle>
+                  <DialogDescription>Create professional play diagrams with text, shapes, and drawing tools like PowerPoint.</DialogDescription>
                 </DialogHeader>
+                <PowerPointDesigner
+                  initial={editingPlay?.powerpoint_design || null}
+                  onSave={(data) => {
+                    if (editingPlay) {
+                      // Editing existing play
+                      const updated = plays.map(p => p.id === editingPlay.id ? { ...p, powerpoint_design: data } : p);
+                      setPlays(updated);
+                      localStorage.setItem(`playbook_${profile.team_id}`, JSON.stringify(updated));
+                      toast({ title: 'Design updated', description: `${editingPlay.name} design updated.` });
+                      setShowPowerPointDesigner(false);
+                      setEditingPlay(null);
+                    } else {
+                      // Creating new play
+                      setNewPowerPointDraft(data);
+                    }
+                  }}
+                  onCancel={() => {
+                    setShowPowerPointDesigner(false);
+                    setEditingPlay(null);
+                  }}
+                />
+                {newPowerPointDraft && (
+                  <form
+                    className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const form = e.currentTarget as HTMLFormElement;
+                      const formData = new FormData(form);
+                      const name = (formData.get('name') as string) || 'New Play';
+                      const category = (formData.get('category') as 'offense' | 'defense' | 'special_teams') || 'offense';
+                      const newPlay: Play = {
+                        id: crypto.randomUUID(),
+                        name,
+                        description: (formData.get('description') as string) || 'PowerPoint design',
+                        category,
+                        positionAssignments: [],
+                        powerpoint_design: newPowerPointDraft,
+                        created_at: new Date().toISOString(),
+                        team_id: profile.team_id,
+                      };
+                      const updated = [...plays, newPlay];
+                      setPlays(updated);
+                      localStorage.setItem(`playbook_${profile.team_id}`, JSON.stringify(updated));
+                      toast({ title: 'Play saved', description: `${name} added to playbook.` });
+                      setShowPowerPointDesigner(false);
+                      setNewPowerPointDraft(null);
+                    }}
+                  >
+                    <div>
+                      <Label htmlFor="pp-name">Name</Label>
+                      <Input id="pp-name" name="name" placeholder="e.g., Single Wing Off Tackle" required />
+                    </div>
+                    <div>
+                      <Label htmlFor="pp-category">Category</Label>
+                      <select name="category" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                        <option value="offense">Offense</option>
+                        <option value="defense">Defense</option>
+                        <option value="special_teams">Special Teams</option>
+                      </select>
+                    </div>
+                    <div className="md:col-span-3">
+                      <Label htmlFor="pp-description">Description</Label>
+                      <Input id="pp-description" name="description" placeholder="Optional details" />
+                    </div>
+                    <div className="md:col-span-3 flex justify-end gap-2 mt-2">
+                      <Button type="button" variant="ghost" onClick={() => setNewPowerPointDraft(null)}>Discard Design</Button>
+                      <Button type="submit">Save Play</Button>
+                    </div>
+                  </form>
+                )}
+              </DialogContent>
                 <PlayDesigner
                   initial={null}
                   onSave={(data) => {
@@ -1071,6 +1158,18 @@ const PlaybookManagement = () => {
                      >
                        <PencilRuler className="h-3 w-3" />
                      </Button>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => {
+                         setEditingPlay(play);
+                         setShowPowerPointDesigner(true);
+                       }}
+                       className="h-7 w-7 p-0"
+                       title="PowerPoint Style"
+                     >
+                       <PencilRuler className="h-3 w-3" />
+                     </Button>
                    </div>
                  </div>
                </CardHeader>
@@ -1123,6 +1222,17 @@ const PlaybookManagement = () => {
                           return <line key={ed.id} x1={from.x} y1={from.y} x2={ed.to.x} y2={ed.to.y} stroke={colors[ed.style]} strokeWidth={2} />
                         })}
                       </svg>
+                    </div>
+                  </div>
+                )}
+                
+                {play.powerpoint_design && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">PowerPoint Design</h4>
+                    <div className="rounded border bg-white p-2">
+                      <div className="text-xs text-muted-foreground">
+                        Professional design with {play.powerpoint_design.elements.length} elements
+                      </div>
                     </div>
                   </div>
                 )}
