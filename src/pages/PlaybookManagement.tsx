@@ -653,6 +653,17 @@ const PlaybookManagement = () => {
                   </form>
                 )}
               </DialogContent>
+            </Dialog>
+            
+            <Dialog open={showNewDesigner} onOpenChange={(open) => {
+              setShowNewDesigner(open);
+              if (!open) setNewDiagramDraft(null);
+            }}>
+              <DialogContent className="max-w-5xl">
+                <DialogHeader>
+                  <DialogTitle>Design New Play</DialogTitle>
+                  <DialogDescription>Create a diagram, then save it as a play in your playbook.</DialogDescription>
+                </DialogHeader>
                 <PlayDesigner
                   initial={null}
                   onSave={(data) => {
@@ -711,6 +722,7 @@ const PlaybookManagement = () => {
                 )}
               </DialogContent>
             </Dialog>
+            
             <Dialog open={showAddPlay} onOpenChange={setShowAddPlay}>
               <DialogTrigger asChild>
                 <Button>
