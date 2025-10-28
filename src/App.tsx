@@ -18,6 +18,10 @@ import PracticePlan from "./pages/PracticePlan";
 import GameDetails from "./pages/GameDetails";
 import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
+import Estimate from "./pages/Estimate";
+import Gallery from "./pages/Gallery";
+import OwnerDashboard from "./pages/OwnerDashboard";
+import Customer from "./pages/Customer";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +35,10 @@ const App = () => (
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/dashboard" element={<Index />} />
+            <Route path="/estimate" element={<Estimate />} />
+            <Route path="/gallery" element={<Gallery />} />
+            <Route path="/owner" element={<OwnerDashboard />} />
+            <Route path="/customer" element={<Customer />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/team" element={<TeamHub />} />
             <Route path="/team/coaches" element={<CoachesPage />} />

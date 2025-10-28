@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3, Clock, Target, Smartphone } from 'lucide-react';
+import { Hammer, Image as ImageIcon, Smartphone } from 'lucide-react';
 import logoImage from '@/assets/down-and-distance-logo.png';
 
 const LandingPage = () => {
@@ -11,8 +11,8 @@ const LandingPage = () => {
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <img src={logoImage} alt="Down & Distance Logo" className="w-8 h-8" />
-            <span className="text-xl font-bold">Down & Distance</span>
+            <img src={logoImage} alt="Hawksnest Construction" className="w-8 h-8" />
+            <span className="text-xl font-bold">Hawksnest Construction</span>
           </div>
           <Link to="/auth">
             <Button variant="outline">Sign In</Button>
@@ -24,25 +24,21 @@ const LandingPage = () => {
       <section className="py-20 bg-gradient-to-br from-background via-background to-primary/5">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 max-w-4xl mx-auto leading-tight">
-            Finally, a stats app built for{' '}
-            <span className="text-primary">youth football coaches</span>
+            Owner‑Operated <span className="text-primary">Construction</span> done right
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-            Turn game-day chaos into data-driven decisions
-          </p>
-          <p className="text-lg text-muted-foreground mb-12 max-w-2xl mx-auto">
-            Log plays with simple dropdowns, get AI insights instantly, and never second-guess your 3rd down calls again.
+            Quality craftsmanship, clear communication, and fair pricing.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link to="/auth">
+            <Link to="/estimate">
               <Button size="lg" className="text-lg px-8 py-6">
-                Start Logging Plays
+                Get an Estimate
               </Button>
             </Link>
-            <Link to="/auth">
+            <Link to="/gallery">
               <Button variant="outline" size="lg" className="text-lg px-8 py-6">
-                See How It Works
+                View Gallery
               </Button>
             </Link>
           </div>
@@ -54,10 +50,10 @@ const LandingPage = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Stop Fighting With Excel Spreadsheets
+              Why homeowners choose Hawksnest
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Built specifically for youth coaches—not complex pro-level systems
+              Small company attention with big company standards.
             </p>
           </div>
 
@@ -65,28 +61,24 @@ const LandingPage = () => {
             <Card className="text-center hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Clock className="w-6 h-6 text-primary" />
+                  <Hammer className="w-6 h-6 text-primary" />
                 </div>
-                <CardTitle className="text-xl">Simple Play Logging</CardTitle>
+                <CardTitle className="text-xl">Quality Craftsmanship</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">
-                  Drop Excel. Use dropdowns. Log plays in seconds during live games with our intuitive interface.
-                </p>
+                <p className="text-muted-foreground">Experienced, detail‑oriented work on every project.</p>
               </CardContent>
             </Card>
 
             <Card className="text-center hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Target className="w-6 h-6 text-primary" />
+                  <ImageIcon className="w-6 h-6 text-primary" />
                 </div>
-                <CardTitle className="text-xl">AI-Powered Insights</CardTitle>
+                <CardTitle className="text-xl">Transparent Results</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">
-                  Get instant recommendations for any down and distance situation (like 3rd and 6).
-                </p>
+                <p className="text-muted-foreground">See our work in the gallery and your customer page.</p>
               </CardContent>
             </Card>
 
@@ -95,12 +87,10 @@ const LandingPage = () => {
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
                   <Smartphone className="w-6 h-6 text-primary" />
                 </div>
-                <CardTitle className="text-xl">Sideline Ready</CardTitle>
+                <CardTitle className="text-xl">Mobile Friendly</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">
-                  Mobile-responsive design built for coaches who need to make quick decisions on the sidelines.
-                </p>
+                <p className="text-muted-foreground">Request estimates and check updates from your phone.</p>
               </CardContent>
             </Card>
           </div>
@@ -167,16 +157,10 @@ const LandingPage = () => {
       {/* CTA Section */}
       <section className="py-20 bg-primary text-primary-foreground">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Ready to Ditch the Spreadsheets?
-          </h2>
-          <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
-            Join youth football coaches who've already made the switch to data-driven decisions
-          </p>
-          <Link to="/auth">
-            <Button size="lg" variant="secondary" className="text-lg px-8 py-6">
-              Get Started Free
-            </Button>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to start your project?</h2>
+          <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">Tell us about your job and we'll reach out.</p>
+          <Link to="/estimate">
+            <Button size="lg" variant="secondary" className="text-lg px-8 py-6">Get an Estimate</Button>
           </Link>
         </div>
       </section>
@@ -185,11 +169,11 @@ const LandingPage = () => {
       <footer className="py-12 border-t">
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <img src={logoImage} alt="Down & Distance Logo" className="w-6 h-6" />
-            <span className="font-bold">Down & Distance</span>
+            <img src={logoImage} alt="Hawksnest Construction" className="w-6 h-6" />
+            <span className="font-bold">Hawksnest Construction</span>
           </div>
           <p className="text-muted-foreground">
-            Youth Football Analytics Platform
+            Residential remodeling, decks, siding, and more.
           </p>
         </div>
       </footer>
